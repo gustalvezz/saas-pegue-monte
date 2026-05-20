@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --teal: #4ECDC4;
+  --teal-d: #1FA8A4;
+  --teal-l: #E0F7F7;
+  --coral: #FF6B6B;
+  --coral-l: #FFF0EE;
+  --green-brand: #95E1A3;
+  --green-dark: #5CB85C;
+  --green-l: #EDFAED;
+  --purple-brand: #B39DDB;
+  --purple-dark: #9B6BC4;
+  --purple-l: #F5EEFB;
+  --orange-brand: #FFAB76;
+  --orange-l: #FFF5E8;
+  --dark: #22223B;
+  --mid: #66667A;
+  --light: #AAAABC;
+  --border: #E6DDF0;
+  --bg: #FFF8FC;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  font-family: 'Nunito', sans-serif;
+  background-color: var(--bg);
+  color: var(--dark);
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer utilities {
+  .bg-brand-bg { background-color: var(--bg); }
+  .text-brand-dark { color: var(--dark); }
+  .text-brand-mid { color: var(--mid); }
+  .text-brand-light { color: var(--light); }
+  .border-brand { border-color: var(--border); }
+
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* Custom pill styles */
+.pill-locacao { background-color: var(--teal-l); color: var(--teal-d); }
+.pill-devolucao { background-color: var(--orange-l); color: var(--orange-brand); }
+.pill-compra { background-color: var(--coral-l); color: var(--coral); }
+.pill-fatura { background-color: var(--purple-l); color: var(--purple-dark); }
+.pill-outros { background-color: #F5F5F5; color: #777; }
+
+/* Chart tooltip */
+.chartjs-tooltip {
+  font-family: 'Nunito', sans-serif !important;
+}
+
+/* Mobile safe area */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Smooth transitions */
+* {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+button, input, select {
+  transition: none;
+}

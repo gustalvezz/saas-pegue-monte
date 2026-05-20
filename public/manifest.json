@@ -1,0 +1,26 @@
+{
+  "name": "Decora Festa · Financeiro",
+  "short_name": "Decora Festa",
+  "description": "Controle financeiro para locação de decorações para festas",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#FFF8FC",
+  "theme_color": "#4ECDC4",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "business"],
+  "lang": "pt-BR"
+}
