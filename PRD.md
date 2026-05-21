@@ -4,16 +4,19 @@
 **Tipo:** Micro SaaS · Controle Financeiro  
 **Proprietária:** Flavia Alves da Silva  
 **Banco:** C6Bank · Ag. 1 · Conta 177400862  
-**Versão do documento:** 1.0  
-**Última atualização:** 2026-05-20  
-**Status:** Em produção
+**Versão do documento:** 2.0  
+**Última atualização:** 2026-05-21  
+**Status:** Em desenvolvimento (v2.0)
 
 ---
 
 ## 1. Visão geral
 
-Sistema web de controle financeiro para uma **empresa de locação de decorações para festas**.
-Permite registrar receitas e despesas, visualizar KPIs e gráficos mensais, e exportar relatórios.
+Sistema web para uma **empresa de locação de decorações para festas**. Módulos:
+1. **Financeiro** — registrar receitas e despesas, visualizar KPIs e gráficos mensais, exportar relatórios
+2. **Atendimento** — chatbot WhatsApp que qualifica leads automaticamente via IA (Evolution API + Claude Haiku)
+3. **Catálogo** — gestão de fotos de decorações enviadas pelo bot para leads durante o atendimento
+
 Acesso exclusivo via login com email/senha (operação single-user).
 
 ---
@@ -59,7 +62,20 @@ Acesso exclusivo via login com email/senha (operação single-user).
 | **PWA** | Instalável em celular, funciona offline com cache básico |
 | **Mobile First** | Tabela vira cards no mobile; todos os controles tocáveis |
 
-### 4.2 Fora do escopo (v1.0)
+### 4.2 Funcionalidades v2.0 — Módulo Atendimento
+
+| Funcionalidade | Descrição |
+|---|---|
+| **Chatbot WhatsApp** | Evolution API recebe mensagens. Claude Haiku gera respostas e coleta dados do lead |
+| **Coleta de dados** | Bot coleta: nome, tipo de festa, data, convidados, local, tema e orçamento |
+| **Takeover automático** | Quando Flávia responde pelo celular (`fromMe: true`), bot é desativado para aquele lead |
+| **Dashboard de leads** | Lista com filtro por status, KPIs: novos hoje / em atendimento / qualificados no mês |
+| **Histórico de conversa** | Visualização estilo WhatsApp com painel de dados coletados pelo bot |
+| **Controle de status** | novo → em_atendimento → qualificado → fechado / perdido |
+| **Catálogo de fotos** | Upload de fotos para Supabase Storage, com categoria e tags |
+| **Bot envia fotos** | Bot envia até 2 fotos relevantes do catálogo quando tem tipo + tema do evento |
+
+### 4.3 Fora do escopo (v2.0)
 
 - Multi-usuário / controle de acesso por empresa
 - Relatórios PDF
@@ -68,6 +84,8 @@ Acesso exclusivo via login com email/senha (operação single-user).
 - Emissão de recibos / notas fiscais
 - Controle de estoque de itens de decoração
 - Agendamento de locações (calendário)
+- Mockups personalizados de decoração por IA
+- Fechamento de lead criando transação automaticamente no financeiro
 
 ---
 
@@ -121,6 +139,49 @@ Acesso exclusivo via login com email/senha (operação single-user).
 
 ## 7. Modelo de dados
 
+### Tabela `leads`
+
+```sql
+id              uuid primary key
+phone           text unique not null
+name            text
+status          text  -- novo | em_atendimento | qualificado | fechado | perdido
+event_type      text  -- aniversário | casamento | chá_bebê | debutante | outros
+event_date      date
+guest_count     int
+venue           text
+budget_range    text  -- até R$500 | R$500-R$1000 | R$1000-R$2000 | R$2000+
+theme_notes     text
+bot_active      bool default true
+created_at      timestamptz
+last_message_at timestamptz
+```
+
+### Tabela `conversations`
+
+```sql
+id            uuid primary key
+lead_id       uuid fk → leads.id
+direction     text  -- inbound | outbound
+message_text  text
+media_url     text
+wa_message_id text unique
+created_at    timestamptz
+```
+
+### Tabela `catalog_items`
+
+```sql
+id          uuid primary key
+name        text not null
+description text
+category    text  -- aniversário | casamento | chá_bebê | debutante | outros
+tags        text[]
+image_url   text not null
+active      bool default true
+created_at  timestamptz
+```
+
 ### Tabela `transactions` (Supabase / PostgreSQL)
 
 ```sql
@@ -151,21 +212,37 @@ created_at  timestamptz not null default now()
 Browser (PWA)
     │
     ├── Next.js 14 App Router (Render)
-    │   ├── /login        → autenticação
-    │   ├── /dashboard    → aplicação principal (client component)
-    │   └── /offline      → fallback PWA
+    │   ├── /login                       → autenticação
+    │   ├── /dashboard                   → financeiro (client component)
+    │   ├── /dashboard/atendimento       → lista de leads
+    │   ├── /dashboard/atendimento/[id]  → conversa + dados do lead
+    │   ├── /dashboard/catalogo          → gestão de fotos
+    │   ├── /api/webhook/whatsapp        → webhook Evolution API (POST)
+    │   └── /offline                     → fallback PWA
     │
-    └── Supabase
-        ├── Auth (email/senha)
-        └── PostgreSQL (tabela transactions)
+    ├── Supabase
+    │   ├── Auth (email/senha)
+    │   ├── PostgreSQL (transactions, leads, conversations, catalog_items)
+    │   └── Storage (bucket "catalog" — fotos públicas)
+    │
+    └── Evolution API (serviço Docker no Render)
+        └── WhatsApp Web → webhook → /api/webhook/whatsapp
 ```
 
-**Fluxo de dados:**
-1. Usuário loga → Supabase Auth cria sessão via cookie
-2. Dashboard monta → `supabase.auth.getUser()` valida sessão
-3. Dados carregados → `supabase.from('transactions').select('*')`
-4. CRUD → insert/update/delete via Supabase JS SDK
-5. Após cada mutação → refetch para atualizar todos os componentes
+**Fluxo do chatbot:**
+1. Lead envia mensagem no WhatsApp da Flávia
+2. Evolution API dispara POST no webhook `/api/webhook/whatsapp?secret=...`
+3. Webhook salva mensagem, busca histórico, chama Claude Haiku
+4. Claude retorna resposta + dados estruturados do lead (em JSON)
+5. Webhook salva resposta, atualiza lead, envia texto via Evolution API
+6. Se `suggestCatalog=true`, busca fotos relevantes e envia também
+7. Se Flávia responde pelo celular → `fromMe=true` → `bot_active=false` → Flávia assume
+
+**Fluxo financeiro:**
+1. Flávia loga → Supabase Auth valida sessão
+2. Dashboard carrega → `supabase.from('transactions').select('*')`
+3. CRUD → insert/update/delete via Supabase JS SDK
+4. Após mutação → refetch imediato
 
 ---
 
@@ -198,7 +275,12 @@ Browser (PWA)
 
 ## 10. Roadmap
 
-### v1.1 (próxima)
+### v2.1 (próxima)
+- [ ] Fechamento de lead → gerar transação de Locação automaticamente no financeiro
+- [ ] Relatório de conversão: leads recebidos → qualificados → fechados
+- [ ] Notificação no dashboard quando novo lead qualificado (badge no header)
+
+### v1.1
 - [ ] Filtro por intervalo de datas (date range picker)
 - [ ] Campo de busca na tabela (search por descrição)
 - [ ] Indicador de saldo atual da conta bancária (campo editável no header)
@@ -221,4 +303,5 @@ Browser (PWA)
 
 | Versão | Data | Alteração |
 |---|---|---|
-| 1.0 | 2026-05-20 | Documento inicial — v1.0 do produto |
+| 1.0 | 2026-05-20 | Documento inicial — v1.0 do produto (módulo financeiro) |
+| 2.0 | 2026-05-21 | Módulo Atendimento — chatbot WhatsApp (Evolution API + Claude Haiku), catálogo de fotos, novas tabelas leads/conversations/catalog_items |

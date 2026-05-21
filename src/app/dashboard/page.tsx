@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
 import { Transaction, TransactionInsert } from '@/lib/types'
 import { computeKPIs, computeMonthlyData, exportToCSV, MONTH_NAMES } from '@/lib/utils'
@@ -130,13 +131,29 @@ export default function DashboardPage() {
             </h1>
             <p className="text-xs truncate" style={{ color: 'var(--mid)' }}>{userEmail}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-3 py-1.5 rounded-lg border text-xs font-bold"
-            style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
-          >
-            Sair
-          </button>
+          <div className="flex items-center gap-1.5">
+            <Link
+              href="/dashboard/atendimento"
+              className="px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1"
+              style={{ borderColor: 'var(--teal)', color: 'var(--teal)', background: 'var(--teal-l)' }}
+            >
+              💬 Atendimento
+            </Link>
+            <Link
+              href="/dashboard/catalogo"
+              className="px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1"
+              style={{ borderColor: 'var(--coral)', color: 'var(--coral)', background: 'var(--coral-l)' }}
+            >
+              🖼 Catálogo
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 rounded-lg border text-xs font-bold"
+              style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
+            >
+              Sair
+            </button>
+          </div>
         </div>
 
         {/* KPIs */}

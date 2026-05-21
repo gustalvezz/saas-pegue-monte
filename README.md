@@ -12,9 +12,11 @@ Gerencia receitas, despesas, categorias e exibe KPIs e gráficos mensais.
 | Frontend | Next.js 14 (App Router) + TypeScript |
 | Estilo | Tailwind CSS + CSS Variables |
 | Gráficos | Chart.js + react-chartjs-2 |
-| Backend / Auth | Supabase (PostgreSQL + Auth) |
+| Backend / Auth | Supabase (PostgreSQL + Auth + Storage) |
 | Deploy | Render (Node server — `output: standalone`) |
 | PWA | Web App Manifest + Service Worker |
+| WhatsApp API | Evolution API (auto-hospedado no Render) |
+| IA Chatbot | Anthropic Claude Haiku (`@anthropic-ai/sdk`) |
 
 ---
 
@@ -30,7 +32,21 @@ Gerencia receitas, despesas, categorias e exibe KPIs e gráficos mensais.
 - **PWA** — instalável em celular, funciona offline (cache)
 - **Mobile First** — tabela vira cards no celular
 
-### Categorias
+### Atendimento (WhatsApp Chatbot)
+
+- **Chatbot IA** via Evolution API + Claude Haiku — coleta automaticamente: nome, tipo de festa, data, convidados, local, tema e orçamento
+- **Takeover automático** — quando a Flávia responde pelo WhatsApp no celular, o bot é desativado automaticamente para aquele lead (detecta `fromMe: true`)
+- **Dashboard de leads** com KPIs (novos hoje, em atendimento, qualificados no mês) e filtro por status
+- **Histórico de conversa** com visualização estilo WhatsApp e painel de dados do lead
+- **Controle de status** — novo → em atendimento → qualificado → fechado/perdido
+
+### Catálogo de decorações
+
+- **Gestão de fotos** — upload para Supabase Storage com categorização e tags
+- **Bot envia fotos** relevantes do catálogo durante a conversa com o lead
+- **Toggle ativo/inativo** — controle de quais fotos o bot pode enviar
+
+### Categorias de transações
 
 `Locação` · `Devolução` · `Compra de Decoração` · `Fatura Cartão` · `Outros`
 
@@ -83,6 +99,14 @@ Crie `.env.local` na raiz:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+
+# Chatbot WhatsApp (opcional — necessário para o módulo Atendimento)
+EVOLUTION_API_URL=https://evolution.seuapp.onrender.com
+EVOLUTION_API_KEY=sua_chave_api
+EVOLUTION_INSTANCE_NAME=decora-festa
+EVOLUTION_WEBHOOK_SECRET=token_secreto_qualquer
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ### 3. Banco de dados
@@ -90,12 +114,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 No SQL Editor do Supabase, execute em ordem:
 
 ```sql
--- 1. Cria tabela + RLS
+-- 1. Tabela de transações financeiras
 supabase/migrations/001_create_transactions.sql
 
--- 2. Popula com dados históricos Mar–Mai 2026 (opcional)
+-- 2. Tabelas de leads e conversas (módulo Atendimento)
+supabase/migrations/002_leads_conversations.sql
+
+-- 3. Tabela de catálogo de decorações
+supabase/migrations/003_catalog.sql
+
+-- 4. Dados históricos Mar–Mai 2026 (opcional)
 supabase/seed.sql
 ```
+
+Crie também o bucket `catalog` no Supabase Storage com acesso público (para as fotos do catálogo).
 
 ### 4. Criar usuário
 
@@ -115,12 +147,22 @@ npm run dev
 O arquivo `render.yaml` já configura tudo automaticamente.
 
 1. Conecte o repositório no [Render](https://render.com)
-2. Adicione as variáveis de ambiente:
+2. Adicione as variáveis de ambiente (todas marcadas `sync: false` no render.yaml):
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE_NAME`, `EVOLUTION_WEBHOOK_SECRET`
+   - `ANTHROPIC_API_KEY`
 3. O Render detecta o `render.yaml` e executa:
    - **Build:** `npm install && npm run build`
    - **Start:** `npm start`
+
+### Evolution API no Render
+
+Deploy separado como serviço Docker:
+- **Image:** `atendai/evolution-api:latest`
+- Após deploy, criar instância e escanear QR code com o WhatsApp da Flávia
+- Configurar webhook para `https://seu-saas.onrender.com/api/webhook/whatsapp?secret=EVOLUTION_WEBHOOK_SECRET`
 
 ---
 
@@ -129,33 +171,44 @@ O arquivo `render.yaml` já configura tudo automaticamente.
 ```
 src/
 ├── app/
-│   ├── page.tsx              # redirect → /login ou /dashboard
-│   ├── layout.tsx            # meta PWA + service worker
-│   ├── globals.css           # CSS variables + Tailwind base
-│   ├── login/page.tsx        # tela de login
-│   ├── dashboard/page.tsx    # dashboard principal
-│   └── offline/page.tsx      # fallback PWA offline
+│   ├── page.tsx                          # redirect → /login ou /dashboard
+│   ├── layout.tsx                        # meta PWA + service worker
+│   ├── globals.css                       # CSS variables + Tailwind base
+│   ├── login/page.tsx                    # tela de login
+│   ├── dashboard/page.tsx               # dashboard financeiro principal
+│   ├── dashboard/atendimento/page.tsx   # lista de leads WhatsApp
+│   ├── dashboard/atendimento/[leadId]/  # conversa + dados do lead
+│   ├── dashboard/catalogo/page.tsx      # gestão do catálogo de fotos
+│   ├── api/webhook/whatsapp/route.ts    # webhook Evolution API
+│   └── offline/page.tsx                  # fallback PWA offline
 ├── components/
-│   ├── KPICards.tsx          # 4 cards de KPI
+│   ├── KPICards.tsx          # 4 cards de KPI financeiro
 │   ├── MonthlyChart.tsx      # gráfico Chart.js
 │   ├── SideStats.tsx         # top clientes + categorias
-│   ├── TransactionForm.tsx   # modal add/edit
-│   └── TransactionTable.tsx  # tabela + mobile cards
+│   ├── TransactionForm.tsx   # modal add/edit transação
+│   ├── TransactionTable.tsx  # tabela + mobile cards
+│   ├── LeadCard.tsx          # card de lead com status badge
+│   ├── ChatBubble.tsx        # bolha de mensagem WhatsApp
+│   └── CatalogUpload.tsx     # upload de foto do catálogo
 └── lib/
     ├── types.ts              # interfaces TypeScript
     ├── utils.ts              # formatBRL, KPIs, CSV, etc.
-    ├── supabase-client.ts    # cliente browser (SSR)
-    └── supabase-server.ts    # cliente server (SSR)
+    ├── supabase-client.ts    # cliente browser
+    ├── supabase-server.ts    # cliente server (SSR com cookies)
+    ├── supabase-admin.ts     # cliente admin (service role, webhook)
+    ├── evolution-api.ts      # wrapper Evolution API (WhatsApp)
+    ├── chatbot.ts            # Claude Haiku — geração de respostas
+    └── catalog.ts            # busca de itens do catálogo
 supabase/
 ├── migrations/
-│   └── 001_create_transactions.sql
+│   ├── 001_create_transactions.sql
+│   ├── 002_leads_conversations.sql
+│   └── 003_catalog.sql
 └── seed.sql
 public/
 ├── manifest.json             # PWA manifest
 ├── sw.js                     # service worker
 └── icons/
-    ├── icon-192.svg
-    └── icon-512.svg
 render.yaml                   # deploy Render
 ```
 
@@ -177,3 +230,4 @@ npm run lint     # ESLint
 | Versão | Data | Descrição |
 |---|---|---|
 | 1.0.0 | 2026-05-20 | Versão inicial — CRUD, KPIs, gráfico, PWA, mobile-first |
+| 2.0.0 | 2026-05-21 | Módulo Atendimento — chatbot WhatsApp via Evolution API + Claude, catálogo de fotos |
