@@ -1,0 +1,23 @@
+name: Keep Alive — Render Free Tier
+
+on:
+  schedule:
+    # Roda a cada 14 minutos (Render dorme após 15 min sem requests)
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # permite rodar manualmente pelo GitHub UI
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping SaaS (Decora Festa)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.SAAS_URL }}/api/health")
+          echo "SaaS status: $STATUS"
+          [ "$STATUS" = "200" ] && echo "✅ SaaS OK" || echo "⚠️ SaaS respondeu $STATUS"
+
+      - name: Ping Evolution API
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.EVOLUTION_API_URL }}/")
+          echo "Evolution API status: $STATUS"
+          [ "$STATUS" = "200" ] || [ "$STATUS" = "404" ] && echo "✅ Evolution API OK" || echo "⚠️ Evolution API respondeu $STATUS"
