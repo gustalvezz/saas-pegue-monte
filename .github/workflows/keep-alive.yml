@@ -11,13 +11,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping SaaS (Decora Festa)
+        continue-on-error: true
+        env:
+          SAAS_URL: ${{ secrets.SAAS_URL }}
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.SAAS_URL }}/api/health")
+          if [ -z "$SAAS_URL" ]; then
+            echo "⏭️ SAAS_URL não configurado — adicione em Settings > Secrets > Actions"
+            exit 0
+          fi
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$SAAS_URL/api/health")
           echo "SaaS status: $STATUS"
           [ "$STATUS" = "200" ] && echo "✅ SaaS OK" || echo "⚠️ SaaS respondeu $STATUS"
 
       - name: Ping Evolution API
+        continue-on-error: true
+        env:
+          EVOLUTION_API_URL: ${{ secrets.EVOLUTION_API_URL }}
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.EVOLUTION_API_URL }}/")
+          if [ -z "$EVOLUTION_API_URL" ]; then
+            echo "⏭️ EVOLUTION_API_URL não configurado — adicione em Settings > Secrets > Actions"
+            exit 0
+          fi
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$EVOLUTION_API_URL/")
           echo "Evolution API status: $STATUS"
-          [ "$STATUS" = "200" ] || [ "$STATUS" = "404" ] && echo "✅ Evolution API OK" || echo "⚠️ Evolution API respondeu $STATUS"
+          { [ "$STATUS" = "200" ] || [ "$STATUS" = "401" ]; } && echo "✅ Evolution API OK" || echo "⚠️ Evolution API respondeu $STATUS"
