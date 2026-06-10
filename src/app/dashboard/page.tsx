@@ -131,24 +131,31 @@ export default function DashboardPage() {
             </h1>
             <p className="text-xs truncate" style={{ color: 'var(--mid)' }}>{userEmail}</p>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
             <Link
-              href="/dashboard/atendimento"
-              className="px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1"
-              style={{ borderColor: 'var(--teal)', color: 'var(--teal)', background: 'var(--teal-l)' }}
+              href="/dashboard/inventario"
+              className="px-2.5 py-1.5 rounded-lg border text-xs font-bold"
+              style={{ borderColor: 'var(--orange-brand)', color: 'var(--orange-brand)', background: 'var(--orange-l)' }}
             >
-              💬 Atendimento
+              📦 Inventário
             </Link>
             <Link
-              href="/dashboard/catalogo"
-              className="px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1"
-              style={{ borderColor: 'var(--coral)', color: 'var(--coral)', background: 'var(--coral-l)' }}
+              href="/dashboard/eventos"
+              className="px-2.5 py-1.5 rounded-lg border text-xs font-bold"
+              style={{ borderColor: 'var(--purple-dark)', color: 'var(--purple-dark)', background: 'var(--purple-l)' }}
             >
-              🖼 Catálogo
+              🎉 Eventos
+            </Link>
+            <Link
+              href="/dashboard/atendimento"
+              className="px-2.5 py-1.5 rounded-lg border text-xs font-bold"
+              style={{ borderColor: 'var(--teal)', color: 'var(--teal)', background: 'var(--teal-l)' }}
+            >
+              💬 Leads
             </Link>
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 rounded-lg border text-xs font-bold"
+              className="px-2.5 py-1.5 rounded-lg border text-xs font-bold"
               style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
             >
               Sair

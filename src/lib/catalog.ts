@@ -1,14 +1,14 @@
 import { createClient } from '@/lib/supabase-client'
-import { CatalogItem, CatalogCategory } from '@/lib/types'
+import { InventoryItem, ItemCategory } from '@/lib/types'
 
 export async function findRelevantItems(
-  category: CatalogCategory | null,
+  category: ItemCategory | null,
   tags: string[]
-): Promise<CatalogItem[]> {
+): Promise<InventoryItem[]> {
   const supabase = createClient()
 
   let query = supabase
-    .from('catalog_items')
+    .from('inventory_items')
     .select('*')
     .eq('active', true)
     .limit(3)
@@ -22,5 +22,5 @@ export async function findRelevantItems(
   }
 
   const { data } = await query.order('created_at', { ascending: false })
-  return (data ?? []) as CatalogItem[]
+  return (data ?? []) as InventoryItem[]
 }

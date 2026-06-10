@@ -66,15 +66,68 @@ export interface Conversation {
   created_at: string
 }
 
-export type CatalogCategory = 'aniversário' | 'casamento' | 'chá_bebê' | 'debutante' | 'outros'
+// --- Inventário ---
 
-export interface CatalogItem {
+export type ItemCategory = 'aniversário' | 'casamento' | 'chá_bebê' | 'debutante' | 'outros'
+export type ItemMaterial = 'ceramica' | 'plastico' | 'mdf' | 'acrilico' | 'led' | 'tecido' | 'lona' | 'outros'
+
+/** Physical inventory item (replaces catalog_items table) */
+export interface InventoryItem {
   id: string
   name: string
   description: string | null
-  category: CatalogCategory
+  category: ItemCategory
+  color: string | null
+  size_description: string | null
+  material: ItemMaterial | null
   tags: string[]
   image_url: string
+  quantity_total: number
+  replacement_price: number | null
+  rental_price_unit: number | null
   active: boolean
   created_at: string
+}
+
+/** InventoryItem with computed availability for a given date range */
+export interface InventoryItemWithAvail extends InventoryItem {
+  quantity_available: number
+}
+
+// Keep alias so old chatbot code compiles while we migrate
+export type CatalogCategory = ItemCategory
+export type CatalogItem = InventoryItem
+
+// --- Eventos / Contratos ---
+
+export type EventStatus = 'cotacao' | 'confirmado' | 'em_andamento' | 'concluido' | 'cancelado'
+
+export interface DecoraEvent {
+  id: string
+  lead_id: string | null
+  client_name: string
+  client_phone: string | null
+  event_type: EventType | null
+  event_date: string
+  pickup_date: string
+  return_date: string
+  venue: string | null
+  theme_notes: string | null
+  guest_count: number | null
+  status: EventStatus
+  notes: string | null
+  created_at: string
+}
+
+export interface EventItem {
+  id: string
+  event_id: string
+  inventory_item_id: string
+  quantity: number
+  unit_price: number
+  created_at: string
+}
+
+export interface EventItemWithDetail extends EventItem {
+  inventory_item: InventoryItem
 }

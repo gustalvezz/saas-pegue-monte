@@ -111,13 +111,35 @@ export default function LeadConversationPage() {
             )}
           </div>
         </div>
-        <button
-          onClick={fetchData}
-          className="text-sm px-2 py-1 rounded-lg border font-bold"
-          style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
-        >
-          ↻
-        </button>
+        <div className="flex items-center gap-1.5">
+          {(lead.status === 'qualificado' || lead.status === 'fechado') && (
+            <button
+              onClick={() => {
+                const p = new URLSearchParams({
+                  client_name: lead.name ?? '',
+                  client_phone: lead.phone ?? '',
+                  event_type: lead.event_type ?? '',
+                  event_date: lead.event_date ?? '',
+                  venue: lead.venue ?? '',
+                  theme_notes: lead.theme_notes ?? '',
+                  guest_count: lead.guest_count?.toString() ?? '',
+                })
+                router.push(`/dashboard/eventos/novo?${p.toString()}`)
+              }}
+              className="px-3 py-1.5 rounded-lg text-white text-xs font-extrabold"
+              style={{ background: 'var(--purple-dark)' }}
+            >
+              🎉 Criar Evento
+            </button>
+          )}
+          <button
+            onClick={fetchData}
+            className="text-sm px-2 py-1 rounded-lg border font-bold"
+            style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
+          >
+            ↻
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row flex-1 max-w-5xl mx-auto w-full">
