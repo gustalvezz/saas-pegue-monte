@@ -133,9 +133,22 @@ export default function EventDetailPage() {
     }
   }
 
+  async function syncCalendar(id: string, action: 'upsert' | 'delete') {
+    fetch('/api/calendar/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId: id, action }),
+    }).catch(() => {/* non-fatal */})
+  }
+
   async function handleStatusChange(newStatus: EventStatus) {
     await supabase.from('events').update({ status: newStatus }).eq('id', eventId)
     setEvent((prev) => prev ? { ...prev, status: newStatus } : prev)
+    if (newStatus === 'confirmado' || newStatus === 'em_andamento') {
+      syncCalendar(eventId, 'upsert')
+    } else if (newStatus === 'cancelado') {
+      syncCalendar(eventId, 'delete')
+    }
   }
 
   async function handleItemsConfirm(

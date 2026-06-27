@@ -116,7 +116,18 @@ export interface DecoraEvent {
   guest_count: number | null
   status: EventStatus
   notes: string | null
+  google_event_id: string | null
   created_at: string
+}
+
+export interface GoogleToken {
+  id: string
+  user_id: string
+  access_token: string
+  refresh_token: string
+  expires_at: string
+  created_at: string
+  updated_at: string
 }
 
 export interface EventItem {

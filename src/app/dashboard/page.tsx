@@ -25,6 +25,8 @@ export default function DashboardPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editTx, setEditTx] = useState<Transaction | null>(null)
   const [userEmail, setUserEmail] = useState('')
+  const [googleConnected, setGoogleConnected] = useState(false)
+  const [googleMsg, setGoogleMsg] = useState('')
 
   // Available months derived from data
   const availableMonths = useMemo(() => {
@@ -46,12 +48,39 @@ export default function DashboardPage() {
   }, [supabase])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/login'); return }
       setUserEmail(user.email ?? '')
       fetchTransactions()
+
+      // Check Google Calendar connection
+      const { data: token } = await supabase
+        .from('google_tokens')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      setGoogleConnected(!!token)
     })
   }, [supabase, router, fetchTransactions])
+
+  // Handle OAuth return feedback via window.location (avoids Suspense requirement of useSearchParams)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const g = params.get('google')
+    if (!g) return
+    if (g === 'connected') {
+      setGoogleConnected(true)
+      setGoogleMsg('✅ Google Agenda conectada!')
+    } else if (g === 'cancelled') {
+      setGoogleMsg('Conexão cancelada.')
+    } else if (g === 'error') {
+      setGoogleMsg('Erro ao conectar Google Agenda. Tente novamente.')
+    }
+    const url = new URL(window.location.href)
+    url.searchParams.delete('google')
+    window.history.replaceState({}, '', url.toString())
+    setTimeout(() => setGoogleMsg(''), 4000)
+  }, [])
 
   // Filtered list for table
   const filtered = useMemo(() => {
@@ -100,6 +129,13 @@ export default function DashboardPage() {
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  async function handleGoogleDisconnect() {
+    await fetch('/api/auth/google/disconnect', { method: 'POST' })
+    setGoogleConnected(false)
+    setGoogleMsg('Google Agenda desconectada.')
+    setTimeout(() => setGoogleMsg(''), 3000)
   }
 
   if (loading) {
@@ -153,6 +189,24 @@ export default function DashboardPage() {
             >
               💬 Leads
             </Link>
+            {googleConnected ? (
+              <button
+                onClick={handleGoogleDisconnect}
+                className="px-2.5 py-1.5 rounded-lg border text-xs font-bold"
+                style={{ borderColor: 'var(--green-dark)', color: 'var(--green-dark)', background: 'var(--green-l)' }}
+                title="Clique para desconectar o Google Agenda"
+              >
+                📅 Agenda ✓
+              </button>
+            ) : (
+              <a
+                href="/api/auth/google"
+                className="px-2.5 py-1.5 rounded-lg border text-xs font-bold"
+                style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
+              >
+                📅 Conectar Agenda
+              </a>
+            )}
             <button
               onClick={handleLogout}
               className="px-2.5 py-1.5 rounded-lg border text-xs font-bold"
@@ -162,6 +216,19 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* Google feedback toast */}
+        {googleMsg && (
+          <div
+            className="mb-4 px-4 py-2.5 rounded-xl text-sm font-bold"
+            style={{
+              background: googleMsg.startsWith('✅') ? 'var(--green-l)' : 'var(--coral-l)',
+              color: googleMsg.startsWith('✅') ? 'var(--green-dark)' : 'var(--coral)',
+            }}
+          >
+            {googleMsg}
+          </div>
+        )}
 
         {/* KPIs */}
         <KPICards kpis={kpis} />
