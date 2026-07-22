@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
+
+export const maxDuration = 60
 import { sendText, sendImage } from '@/lib/evolution-api'
 import { generateBotResponse } from '@/lib/chatbot'
 import { findRelevantItems } from '@/lib/catalog'

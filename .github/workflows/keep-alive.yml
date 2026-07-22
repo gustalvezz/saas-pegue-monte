@@ -1,28 +1,16 @@
-name: Keep Alive — Render Free Tier
+name: Keep Alive — Evolution API (Render Free Tier)
 
 on:
   schedule:
     # Roda a cada 14 minutos (Render dorme após 15 min sem requests)
+    # O SaaS agora roda no Vercel e não precisa de ping
     - cron: '*/14 * * * *'
-  workflow_dispatch: # permite rodar manualmente pelo GitHub UI
+  workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping SaaS (Decora Festa)
-        continue-on-error: true
-        env:
-          SAAS_URL: ${{ secrets.SAAS_URL }}
-        run: |
-          if [ -z "$SAAS_URL" ]; then
-            echo "⏭️ SAAS_URL não configurado — adicione em Settings > Secrets > Actions"
-            exit 0
-          fi
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$SAAS_URL/api/health")
-          echo "SaaS status: $STATUS"
-          [ "$STATUS" = "200" ] && echo "✅ SaaS OK" || echo "⚠️ SaaS respondeu $STATUS"
-
       - name: Ping Evolution API
         continue-on-error: true
         env:
