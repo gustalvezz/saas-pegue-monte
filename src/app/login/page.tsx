@@ -35,7 +35,6 @@ export default function LoginPage() {
         <div className="flex flex-col items-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Decora Festa" className="h-24 w-auto mb-2" />
-          <p className="text-sm text-brand-mid mt-1">Controle Financeiro</p>
         </div>
 
         {/* Card */}

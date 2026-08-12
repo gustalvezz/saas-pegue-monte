@@ -1,7 +1,8 @@
-# 🎈 Decora Festa · Dashboard Financeiro
+# 🎈 Decora Festa
 
-Micro SaaS para controle financeiro de empresa de **locação de decorações para festas**.
-Gerencia receitas, despesas, inventário, eventos e exibe KPIs e gráficos mensais.
+Micro SaaS de **locação de decorações para festas**. O core do produto é fechar negócios: uma vitrine pública (planejada, ver `PRD.md` seção 11) onde o cliente monta um pedido de locação (kits prontos ou itens avulsos) e envia uma cotação — mais um painel interno para a proprietária gerenciar inventário, eventos, atendimento via WhatsApp e financeiro.
+
+> A loja pública ainda não está implementada — o que existe hoje é o painel interno (financeiro, atendimento, inventário, eventos). O plano completo da loja está documentado em `PRD.md`.
 
 ---
 
@@ -286,3 +287,5 @@ npm run lint     # ESLint
 | 3.0.0 | 2026-06-16 | Módulo Inventário (substitui catálogo simples) + módulo Eventos com controle de disponibilidade e status |
 | 3.1.0 | 2026-06-16 | Integração com Google Agenda via OAuth 2.0 — sincronização automática de eventos confirmados/cancelados |
 | 3.2.0 | 2026-07-23 | Migração de deploy: Render → Vercel (funções serverless, `maxDuration` estendido nas rotas de API) |
+| 3.2.1 | 2026-08-12 | Aplica logo oficial (favicon, ícones PWA, headers do login e dashboard) no lugar do ícone placeholder |
+| 4.0.0 | 2026-08-12 | Reposiciona o produto (core = vitrine pública de locação, não controle financeiro) e documenta o plano completo da Loja Pública no PRD.md — planejamento apenas, implementação ainda não iniciada |

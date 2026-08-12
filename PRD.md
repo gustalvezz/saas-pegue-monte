@@ -1,24 +1,31 @@
-# PRD — Decora Festa · Dashboard Financeiro
+# PRD — Decora Festa
 
 **Produto:** Decora Festa
-**Tipo:** Micro SaaS · Controle Financeiro, Inventário e Eventos
+**Tipo:** Micro SaaS de locação de decorações para festas — vitrine pública de reservas + gestão do negócio (inventário, eventos, financeiro, atendimento)
 **Proprietária:** Flavia Alves da Silva
 **Banco:** C6Bank · Ag. 1 · Conta 177400862
-**Versão do documento:** 3.2
-**Última atualização:** 2026-07-23
-**Status:** Em produção (v3.2 — deploy no Vercel)
+**Versão do documento:** 4.0
+**Última atualização:** 2026-08-12
+**Status:** Em produção (v3.2, painel interno) · v4.0 (Loja Pública) em planejamento
 
 ---
 
 ## 1. Visão geral
 
-Sistema web para uma **empresa de locação de decorações para festas**. Módulos:
+**O core do produto não é mais controle financeiro — é fechar negócios de locação.** O financeiro é um módulo interno importante (e continua existindo), mas o motor do negócio a partir da v4.0 passa a ser a **vitrine pública**: uma loja online onde qualquer visitante encontra a Decora Festa pelo Google (ou por uma IA de busca), navega o catálogo, monta um pedido de locação (kit pronto + itens avulsos) e envia uma cotação — sem precisar falar com a Flávia antes de saber o que quer.
+
+Sistema web com dois lados:
+
+**Público (novo, v4.0):**
+- **Loja / Vitrine** — catálogo indexável no Google e legível por LLMs, com kits prontos e itens avulsos para locação, disponibilidade real por data, e fluxo de cotação sem necessidade de login
+
+**Interno (existente, protegido por login):**
 1. **Financeiro** — registrar receitas e despesas, visualizar KPIs e gráficos mensais, exportar relatórios
 2. **Atendimento** — chatbot WhatsApp que qualifica leads automaticamente via IA (Evolution API + Claude Haiku)
 3. **Inventário** — cadastro de itens físicos de decoração com controle de disponibilidade por período
-4. **Eventos** — gestão de locações por evento, com seleção de itens do inventário e sincronização com Google Agenda
+4. **Eventos / Pedidos** — gestão de locações por evento (incluindo cotações vindas da loja pública), com sincronização com Google Agenda
 
-Acesso exclusivo via login com email/senha (operação single-user).
+Acesso ao painel interno exclusivo via login com email/senha (operação single-user — só a Flávia). A loja pública não exige login para o cliente final.
 
 ---
 
@@ -38,13 +45,21 @@ Acesso exclusivo via login com email/senha (operação single-user).
 
 ## 3. Personas
 
-### Flavia (proprietária / único usuário)
+### Flavia (proprietária / único usuário do painel interno)
 - Gerencia a empresa de locação de decorações sozinha
 - Usa principalmente o celular para registrar transações e cadastrar itens (com foto tirada na hora) no dia a dia
 - Precisa saber rapidamente quanto entrou, quanto saiu e qual o saldo do mês
 - Precisa saber, ao fechar um novo evento, se tem itens de decoração disponíveis nas datas necessárias
 - Quer que os eventos confirmados apareçam automaticamente na sua agenda do Google
 - Quer exportar os dados para entregar à contabilidade
+- **Nova (v4.0):** quer receber pedidos de locação prontos por email, revisar/ajustar antes de confirmar, e não perder tempo respondendo "qual o preço desse item?" no WhatsApp — a loja já responde isso
+
+### Cliente final (visitante da loja pública) — nova persona v4.0
+- Chega pelo Google (busca orgânica), por indicação, ou perguntando pra uma IA tipo ChatGPT/Gemini sobre locação de decoração na região
+- Não conhece o catálogo de antemão — quer navegar, ver fotos e preços sem precisar falar com alguém primeiro
+- Pode saber exatamente o item que quer, ou só ter uma ideia vaga ("queria algo de dinossauro pro aniversário do meu filho")
+- Espera um fluxo rápido: escolher, informar a data do evento, se cadastrar e pronto — sem burocracia, sem precisar criar conta com senha
+- Confirma e assina o contrato depois que a Flávia já validou o pedido com ele
 
 ---
 
@@ -396,7 +411,15 @@ Browser (PWA)
 
 ## 10. Roadmap
 
-### v3.3 (próxima)
+### v4.0 — Loja Pública (próxima, prioridade máxima)
+Plano completo na seção 11. Resumo das fases:
+- [ ] Fase 1 — Fundação pública (schema, RLS pública, páginas de catálogo/produto/kit com SEO completo)
+- [ ] Fase 2 — Fluxo de pedido (seletor de itens, cadastro do cliente, cotação pendente, email via Resend)
+- [ ] Fase 3 — Dashboard de pedidos pendentes
+- [ ] Fase 4 — Contrato em PDF + assinatura eletrônica simples + sync automático com Google Agenda
+- [ ] Fase 5 — Assistente de busca por IA (reutilizável no WhatsApp depois)
+
+### v3.3 (backlog do painel interno, depois da loja)
 - [ ] Fechamento de lead → gerar transação de Locação automaticamente no financeiro
 - [ ] Relatório de conversão: leads recebidos → qualificados → fechados
 - [ ] Notificação no dashboard quando novo lead qualificado (badge no header)
@@ -426,7 +449,104 @@ Browser (PWA)
 
 ---
 
-## 11. Histórico de versões do PRD
+## 11. Loja Pública — Plano v4.0 (planejado, ainda não implementado)
+
+Esta seção documenta as decisões de produto já fechadas para a vitrine pública, antes de qualquer implementação. Nada aqui existe em código ainda — é o plano acordado.
+
+### 11.1 Conceito
+
+Vitrine pública em `decorafesta.app.br` (domínio raiz) onde o cliente final navega o catálogo — **kits prontos** (ex: "Kit Hotwheels Pegue e Monte") e **itens avulsos** — e monta um pedido de locação. Sem carrinho multi-produto e sem pagamento online na v4.0: o fluxo é **linear, um kit/item principal por vez**, com a possibilidade de agregar itens extras àquela seleção antes de enviar como cotação pendente.
+
+O painel interno da Flávia (`/login`, `/dashboard/*`) não muda de lugar nem de comportamento — continua exatamente como está hoje.
+
+### 11.2 Kits
+
+- Um kit é cadastrado como um item normal do inventário (`inventory_items`, novo campo `is_kit boolean`) — tem nome, foto, categoria, preço de locação próprio e aparece no catálogo como qualquer outro item.
+- Nova tabela `kit_items` (`kit_id → inventory_items.id`, `component_item_id → inventory_items.id`, `quantity`) define o que compõe o kit — exibido na página do kit como "Conteúdo do kit" (nome + foto + referência de cada componente, sem preço individual).
+- **Disponibilidade do kit** = pior disponibilidade entre todos os componentes no período escolhido, considerando a quantidade de kits pedida — reaproveita a lógica já existente em `src/lib/inventory.ts`, estendida para iterar sobre os componentes do kit.
+- **Diferencial vs. concorrente:** na página do kit, o cliente pode adicionar itens extras à seleção (ex: um arco de balão, um painel a mais) — ver 11.4.
+
+### 11.3 Fluxo do cliente (linear, sem carrinho multi-produto)
+
+1. Visitante entra no catálogo (`/`, `/categoria/[slug]`) ou cai direto numa página de produto/kit vinda do Google
+2. Na página do kit/item, escolhe a **data do evento** — o sistema valida disponibilidade real naquele período (a vitrine mostra tudo do catálogo sem exigir data antes; a checagem de disponibilidade só acontece quando a data é informada)
+3. Opcionalmente adiciona itens extras à seleção (seletor visual ou assistente por IA — ver 11.4)
+4. Revisa o resumo (kit + extras + valor total)
+5. Se cadastra: **nome, endereço, CPF, telefone, email** (dados usados depois para gerar o contrato)
+6. Envia — isso cria uma cotação pendente no banco (não é uma reserva confirmada ainda)
+7. Vê uma tela de confirmação simples ("recebemos seu pedido, a Flávia vai confirmar disponibilidade e falar com você")
+
+### 11.4 Adicionar itens extras — seletor visual + assistente por IA
+
+Os dois convivem, não é um ou outro:
+
+- **Seletor visual (base, sempre disponível):** grid com busca/filtro por categoria, foto, preço e disponibilidade já considerando a data escolhida — é essencialmente o `ItemPicker` que já existe para uso interno da Flávia, exposto publicamente sem exigir login, reaproveitando `getItemsWithAvailability`.
+- **Assistente por IA (diferencial, opcional):** botão visível ("✨ Não sabe o que procura? Pergunte pra gente") abre um modal (quase tela cheia no mobile, modal grande no desktop) com um chat. O cliente descreve em linguagem natural ("um arco de balão dourado"), e o Claude usa uma **ferramenta de busca real** (`buscar_itens(termo, categoria?)`, tool calling — mesmo padrão do `chatbot.ts`) que consulta o Supabase de verdade (nome, tags, categoria, preço, disponibilidade na data escolhida). A resposta sempre renderiza **cards reais** dos itens encontrados (nunca texto inventado) com botão "adicionar".
+- Essa ferramenta de busca é desenhada como **módulo independente e reutilizável** — não fica amarrada só à loja. Fica pronta pra, numa atualização futura, ser plugada no `chatbot.ts` do WhatsApp também (upgrade da busca por tags simples que existe hoje pra busca por linguagem natural de verdade), com a ressalva de que no WhatsApp a resposta vira texto + fotos (Evolution API não tem cards interativos), não um clique de "adicionar".
+
+### 11.5 Do pedido ao contrato assinado
+
+1. Cotação pendente cria uma linha em `events` (reaproveitando o fluxo de status que já existe: `cotacao → confirmado → em_andamento → concluido`/`cancelado`), vinculada a um novo registro em `customers`
+2. Flávia recebe **notificação por email** (Resend) avisando do novo pedido
+3. No dashboard, nova tela **"Pedidos pendentes"** lista as cotações vindas da loja — Flávia pode editar itens, data, dados do cliente antes de confirmar (ela tem autorização total pra ajustar o pedido)
+4. Ela combina os detalhes com o cliente pelo WhatsApp
+5. Ao clicar **"Finalizar"**: sistema gera o PDF do contrato (modelo fornecido pela Flávia) e cria um **link de assinatura** público (rota tipo `/assinar/[token]`, sem necessidade de login)
+6. Cliente abre o link, revisa o PDF, assina (canvas de assinatura simples — ver 11.6) — contrato fica selado, evento muda pra `confirmado`, e **sincroniza automaticamente com o Google Agenda** (reaproveitando `/api/calendar/sync`, que já existe)
+
+### 11.6 Assinatura digital (v4.0 — assinatura eletrônica simples, embutida)
+
+- Canvas de assinatura no navegador (ex: lib `signature_pad`) — cliente desenha a assinatura
+- Trilha de auditoria salva junto: nome digitado, IP, user-agent, timestamp
+- Assinatura (imagem) é "carimbada" no PDF via `pdf-lib` e tudo fica salvo no Supabase Storage
+- Nível de **assinatura eletrônica simples** (reconhecida pela Lei 14.063/2020) — não é ICP-Brasil. Suficiente para contratos desse porte; migrar para ZapSign/Clicksign (assinatura com validade jurídica mais forte) fica como upgrade de v2, trocando só esse módulo, sem mudar arquitetura.
+
+### 11.7 SEO e leitura por LLM (requisito transversal, não uma fase separada)
+
+Toda página pública precisa nascer com isso — não é polimento de depois:
+
+| Requisito | Como |
+|---|---|
+| **Server-rendered** | Páginas públicas são Server Components (SSR/SSG com ISR), não `'use client'` — diferente do padrão atual do dashboard, que é 100% client-side. Necessário pra crawler de busca e de LLM lerem o HTML puro, sem depender de JS rodar |
+| **URL limpa e indexável** | `inventory_items` ganha campo `slug` (único, gerado do nome, editável pela Flávia). Rotas: `/produto/[slug]`, `/categoria/[slug]` — nunca UUID na URL |
+| **Metadados por página** | `generateMetadata()` dinâmico por produto/categoria: `title`, `description` (a partir da descrição do item, enriquecida — ver abaixo), Open Graph (`og:image` = foto do item, `og:title`, `og:description`), Twitter Card |
+| **Dados estruturados (JSON-LD)** | Schema.org `Product` em cada página de item/kit: nome, imagem, descrição, `offers` (preço, `priceCurrency: BRL`, disponibilidade), categoria — é o que alimenta rich results do Google e dá contexto estruturado pra LLMs |
+| **Descrição enriquecida** | Campo `description` de `inventory_items` passa a ser tratado como conteúdo de verdade (material, cor, tamanho, ocasião, o que combina), não um texto opcional e curto — entra na meta description, no JSON-LD e no corpo da página |
+| **`sitemap.xml`** | Gerado dinamicamente (`app/sitemap.ts`) listando toda página de produto/kit/categoria |
+| **`robots.txt`** | Libera rotas públicas, bloqueia `/dashboard`, `/api`, `/login` |
+| **`llms.txt`** | Arquivo na raiz descrevendo o negócio e as páginas principais, no formato que agentes de IA/LLM crawlers já sabem ler |
+| **HTML semântico** | Hierarquia de headings correta, `alt` descritivo em toda foto de item (não nome de arquivo) |
+| **Imagem otimizada** | Páginas públicas usam `next/image` (diferente do `<img>` simples usado hoje no admin) — impacta Core Web Vitals, que também é fator de ranking |
+| **Canonical + `lang="pt-BR"`** | URL canônica por página; idioma já correto no `<html>` |
+
+### 11.8 Modelo de dados — resumo das adições
+
+| Tabela/campo | Tipo | Descrição |
+|---|---|---|
+| `inventory_items.is_kit` | `boolean` | Marca item como kit |
+| `inventory_items.slug` | `text` unique | URL limpa e indexável |
+| `kit_items` (nova) | — | Componentes de um kit (kit_id, component_item_id, quantity) |
+| `categories` (nova, a confirmar) | — | Taxonomia de navegação da loja (Balões, Mesas, Painéis, Pegue e Monte…) — **diferente** do enum atual `category` de `inventory_items` (que é tipo de festa: aniversário/casamento/etc — usado internamente pra atendimento/leads, continua existindo em paralelo) |
+| `customers` (nova) | — | nome, CPF, telefone, email, endereço completo — usado pra gerar contrato |
+| `events.customer_id` | `uuid` FK | Vincula evento ao cliente cadastrado na loja |
+| `events.event_time` | `time` | Horário do evento (hoje só existe data) |
+| `contracts` (nova) | — | PDF gerado, imagem da assinatura, IP/user-agent/timestamp, token de assinatura, `event_id` FK |
+| RLS de `inventory_items` | policy nova | Leitura pública (`anon`) de itens ativos — hoje é só `authenticated` |
+
+> A tabela `categories` ainda precisa de confirmação — é uma inferência a partir dos prints de referência (que mostram categorias por tipo de produto, tipo "Balões", "Mesas", "Vasos"), não foi discutida explicitamente ainda.
+
+### 11.9 Fases de implementação sugeridas
+
+| Fase | Entrega |
+|---|---|
+| **1 — Fundação pública** | Migrations (slug, is_kit, kit_items, categories, customers, event_time), RLS pública de leitura, páginas de catálogo/produto/kit com SEO completo (11.7), sitemap, robots, llms.txt |
+| **2 — Fluxo de pedido** | Seletor visual de itens extras, cadastro do cliente, geração da cotação pendente (`events` + `customers` + `event_items`), email pra Flávia via Resend |
+| **3 — Dashboard de pedidos** | Tela "Pedidos pendentes" — editar, confirmar, cancelar cotações vindas da loja |
+| **4 — Contrato + assinatura** | Geração de PDF, link de assinatura público, canvas de assinatura + trilha de auditoria, sync automático com Google Agenda ao finalizar |
+| **5 — Assistente por IA** | Ferramenta de busca compartilhada (`buscar_itens`), modal de chat na loja — desenhada para reuso futuro no WhatsApp |
+
+---
+
+## 12. Histórico de versões do PRD
 
 | Versão | Data | Alteração |
 |---|---|---|
@@ -435,3 +555,4 @@ Browser (PWA)
 | 3.0 | 2026-07-23 | Documenta módulos Inventário e Eventos (tabelas `inventory_items`, `events`, `event_items`) que já estavam implementados desde 2026-06-16 mas não documentados |
 | 3.1 | 2026-07-23 | Documenta integração com Google Agenda via OAuth 2.0 (tabela `google_tokens`, fluxo de sincronização) |
 | 3.2 | 2026-07-23 | Atualiza arquitetura e requisitos não-funcionais para refletir a migração de deploy Render → Vercel |
+| 4.0 | 2026-08-12 | Reposiciona o produto (core = fechar negócios via vitrine pública, não controle financeiro) e documenta o plano completo da Loja Pública: kits, fluxo de cotação sem carrinho, assistente por IA reutilizável, assinatura eletrônica, requisitos de SEO/LLM, modelo de dados e fases de implementação — planejado, ainda não implementado |
