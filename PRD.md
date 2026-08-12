@@ -486,6 +486,8 @@ Os dois convivem, não é um ou outro:
 
 ### 11.5 Do pedido ao contrato assinado
 
+Modelo de referência real fornecido pela Flávia: `docs/contrato-modelo.pdf` — usado como template para a geração do PDF (cláusulas fixas, campos de partes/locação/lista de itens).
+
 1. Cotação pendente cria uma linha em `events` (reaproveitando o fluxo de status que já existe: `cotacao → confirmado → em_andamento → concluido`/`cancelado`), vinculada a um novo registro em `customers`
 2. Flávia recebe **notificação por email** (Resend) avisando do novo pedido
 3. No dashboard, nova tela **"Pedidos pendentes"** lista as cotações vindas da loja — Flávia pode editar itens, data, dados do cliente antes de confirmar (ela tem autorização total pra ajustar o pedido)
@@ -518,27 +520,43 @@ Toda página pública precisa nascer com isso — não é polimento de depois:
 | **Imagem otimizada** | Páginas públicas usam `next/image` (diferente do `<img>` simples usado hoje no admin) — impacta Core Web Vitals, que também é fator de ranking |
 | **Canonical + `lang="pt-BR"`** | URL canônica por página; idioma já correto no `<html>` |
 
-### 11.8 Modelo de dados — resumo das adições
+### 11.8 Categorias × Tags (decidido)
+
+- **Categorias = tipo de produto** (Balões, Mesas, Painéis, Vasos, Pegue e Monte…), confirmadas como a taxonomia de navegação da loja. Substitui o enum antigo `category` de `inventory_items` (que era tipo de festa) **como categoria** — tipo de festa não serve pra classificar o item.
+- **Tipo de festa/ocasião vira tag**, não categoria — `aniversário`, `casamento`, `chá de bebê`, `debutante`, `infantil`, `menina`, `menino`, `adulto`, `15 anos` etc. viram valores de um vocabulário de **tags pré-cadastradas** (a Flávia escolhe de uma lista ao cadastrar o item, não digita livre — evita "menina" vs "menininha" inconsistente).
+- `inventory_items.tags` (já existe como `text[]`) continua sendo o campo de armazenamento — sem mudança de schema aí, sem precisar reescrever a lógica de busca por overlap que já existe. O que muda é a **origem dos valores**: uma nova tabela `tag_options` alimenta um seletor/autocomplete no formulário de item, em vez de um campo de texto livre.
+- O enum `event_type` que já existe em `leads` (atendimento/chatbot) **não muda** — é um conceito diferente (dado coletado sobre o lead, não categorização de produto).
+
+### 11.9 Modelo de dados — resumo das adições
+
+Campos adicionais abaixo vieram da leitura do modelo de contrato real fornecido (`docs/contrato-modelo.pdf`) — o rascunho anterior não tinha frete, sinal/restante, tipo de espaço, nem os dois horários (entrega × devolução).
 
 | Tabela/campo | Tipo | Descrição |
 |---|---|---|
 | `inventory_items.is_kit` | `boolean` | Marca item como kit |
 | `inventory_items.slug` | `text` unique | URL limpa e indexável |
+| `inventory_items.category_id` | `uuid` FK | Substitui o enum antigo `category` |
 | `kit_items` (nova) | — | Componentes de um kit (kit_id, component_item_id, quantity) |
-| `categories` (nova, a confirmar) | — | Taxonomia de navegação da loja (Balões, Mesas, Painéis, Pegue e Monte…) — **diferente** do enum atual `category` de `inventory_items` (que é tipo de festa: aniversário/casamento/etc — usado internamente pra atendimento/leads, continua existindo em paralelo) |
-| `customers` (nova) | — | nome, CPF, telefone, email, endereço completo — usado pra gerar contrato |
+| `categories` (nova) | — | Taxonomia por tipo de produto (Balões, Mesas, Painéis, Pegue e Monte…) |
+| `tag_options` (nova) | — | Vocabulário pré-cadastrado de tags (infantil, menina, menino, adulto, 15 anos…), alimenta o seletor no admin |
+| `customers` (nova) | — | nome, CPF, RG (opcional), telefone, email, endereço completo, pessoa de referência (nome + telefone, opcional) |
 | `events.customer_id` | `uuid` FK | Vincula evento ao cliente cadastrado na loja |
-| `events.event_time` | `time` | Horário do evento (hoje só existe data) |
+| `events.pickup_time` | `time` | Horário de entrega/retirada dos itens |
+| `events.return_deadline_time` | `time` | Horário-limite de devolução |
+| `events.space_type` | `text` | `interno` \| `externo` \| `misto` |
+| `events.delivery_fee` | `numeric(10,2)` | Frete de entrega (separado do valor dos itens) |
+| `events.return_shipping` | `text` | `locataria` \| `locadora` \| `retirada_locadora` — quem cuida do frete de devolução |
+| `events.deposit_amount` | `numeric(10,2)` | Sinal (50% do valor, conforme cláusula 9ª do contrato) |
 | `contracts` (nova) | — | PDF gerado, imagem da assinatura, IP/user-agent/timestamp, token de assinatura, `event_id` FK |
 | RLS de `inventory_items` | policy nova | Leitura pública (`anon`) de itens ativos — hoje é só `authenticated` |
 
-> A tabela `categories` ainda precisa de confirmação — é uma inferência a partir dos prints de referência (que mostram categorias por tipo de produto, tipo "Balões", "Mesas", "Vasos"), não foi discutida explicitamente ainda.
+**Sobre o contrato:** os campos "Estado na Saída" e "Conferido" da tabela de itens no modelo são preenchidos manualmente na entrega física (não fazem parte do fluxo de assinatura digital — ficam em branco no PDF gerado, igual ao modelo). A coluna de preço no contrato usa o **valor de reposição** (`replacement_price`, já existe em `inventory_items`), não o preço de locação. Dados da Locadora (Flávia — nome e CPF) são fixos/configuráveis, não vêm do pedido. Testemunhas ficam opcionais/em branco no fluxo digital.
 
-### 11.9 Fases de implementação sugeridas
+### 11.10 Fases de implementação sugeridas
 
 | Fase | Entrega |
 |---|---|
-| **1 — Fundação pública** | Migrations (slug, is_kit, kit_items, categories, customers, event_time), RLS pública de leitura, páginas de catálogo/produto/kit com SEO completo (11.7), sitemap, robots, llms.txt |
+| **1 — Fundação pública** | Migrations (slug, is_kit, kit_items, categories, tag_options, customers, campos de contrato em events), RLS pública de leitura, páginas de catálogo/produto/kit com SEO completo (11.7), sitemap, robots, llms.txt |
 | **2 — Fluxo de pedido** | Seletor visual de itens extras, cadastro do cliente, geração da cotação pendente (`events` + `customers` + `event_items`), email pra Flávia via Resend |
 | **3 — Dashboard de pedidos** | Tela "Pedidos pendentes" — editar, confirmar, cancelar cotações vindas da loja |
 | **4 — Contrato + assinatura** | Geração de PDF, link de assinatura público, canvas de assinatura + trilha de auditoria, sync automático com Google Agenda ao finalizar |
