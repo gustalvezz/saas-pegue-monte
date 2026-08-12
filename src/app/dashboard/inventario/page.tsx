@@ -6,14 +6,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
-import { InventoryItem, ItemCategory, ItemMaterial } from '@/lib/types'
+import { InventoryItem, ItemMaterial, ProductCategory } from '@/lib/types'
 import InventoryItemCard from '@/components/InventoryItemCard'
 import InventoryItemForm from '@/components/InventoryItemForm'
 
-const CATEGORY_LABELS: Record<ItemCategory, string> = {
-  aniversário: 'Aniversário', casamento: 'Casamento', chá_bebê: 'Chá de bebê',
-  debutante: 'Debutante', outros: 'Outros',
-}
 const MATERIAL_LABELS: Record<ItemMaterial, string> = {
   ceramica: 'Cerâmica', plastico: 'Plástico', mdf: 'MDF', acrilico: 'Acrílico',
   led: 'LED', tecido: 'Tecido', lona: 'Lona', outros: 'Outros',
@@ -23,18 +19,20 @@ export default function InventarioPage() {
   const router = useRouter()
   const supabase = createClient()
   const [items, setItems] = useState<InventoryItem[]>([])
+  const [categories, setCategories] = useState<ProductCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filterCat, setFilterCat] = useState<ItemCategory | 'todos'>('todos')
+  const [filterCat, setFilterCat] = useState<string>('todos')
   const [filterMat, setFilterMat] = useState<ItemMaterial | 'todos'>('todos')
   const [formOpen, setFormOpen] = useState(false)
 
   const fetchItems = useCallback(async () => {
-    const { data } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .order('name', { ascending: true })
+    const [{ data }, { data: cats }] = await Promise.all([
+      supabase.from('inventory_items').select('*').order('name', { ascending: true }),
+      supabase.from('categories').select('*').order('name'),
+    ])
     setItems((data ?? []) as InventoryItem[])
+    setCategories((cats ?? []) as ProductCategory[])
     setLoading(false)
   }, [supabase])
 
@@ -48,7 +46,7 @@ export default function InventarioPage() {
   const filtered = items.filter((i) => {
     const matchSearch = !search || i.name.toLowerCase().includes(search.toLowerCase()) ||
       i.tags.some((t) => t.includes(search.toLowerCase()))
-    const matchCat = filterCat === 'todos' || i.category === filterCat
+    const matchCat = filterCat === 'todos' || i.category_id === filterCat
     const matchMat = filterMat === 'todos' || i.material === filterMat
     return matchSearch && matchCat && matchMat
   })
@@ -107,18 +105,18 @@ export default function InventarioPage() {
 
         {/* Category filter */}
         <div className="flex gap-1.5 flex-wrap mb-2">
-          {(['todos', ...Object.keys(CATEGORY_LABELS)] as (ItemCategory | 'todos')[]).map((c) => {
-            const count = c === 'todos' ? items.length : items.filter((i) => i.category === c).length
-            const active = filterCat === c
+          {[{ id: 'todos', name: 'Todos' }, ...categories].map((c) => {
+            const count = c.id === 'todos' ? items.length : items.filter((i) => i.category_id === c.id).length
+            const active = filterCat === c.id
             return (
-              <button key={c} onClick={() => setFilterCat(c)}
+              <button key={c.id} onClick={() => setFilterCat(c.id)}
                 className="px-3 py-1 rounded-full border text-xs font-extrabold transition-all"
                 style={{
                   borderColor: active ? 'var(--orange-brand)' : 'var(--border)',
                   background: active ? 'var(--orange-brand)' : 'transparent',
                   color: active ? '#fff' : 'var(--mid)',
                 }}>
-                {c === 'todos' ? 'Todos' : CATEGORY_LABELS[c]} ({count})
+                {c.name} ({count})
               </button>
             )
           })}

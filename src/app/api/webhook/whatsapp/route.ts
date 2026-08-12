@@ -177,11 +177,13 @@ export async function POST(req: NextRequest) {
 
   // If we have enough context, send catalog photos
   if (suggestCatalog) {
-    const category = (leadData?.event_type ?? lead.event_type) as import('@/lib/types').CatalogCategory | null
+    const eventType = leadData?.event_type ?? lead.event_type
     const themeNotes = leadData?.theme_notes ?? lead.theme_notes ?? ''
-    const tags = themeNotes.toLowerCase().split(/[\s,]+/).filter(Boolean)
+    const tags = [eventType, ...themeNotes.toLowerCase().split(/[\s,]+/)]
+      .filter((t): t is string => Boolean(t))
+      .map((t) => t.toLowerCase())
 
-    const items = await findRelevantItems(category, tags)
+    const items = await findRelevantItems(tags)
     for (const item of items.slice(0, 2)) {
       try {
         await sendImage(phone, item.image_url, item.name)

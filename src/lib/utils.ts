@@ -14,6 +14,19 @@ export const MONTH_NAMES: Record<number, string> = {
   9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro',
 }
 
+/** Slug simples e legível: sem acento, minúsculo, hífens no lugar de espaço/pontuação */
+export function slugify(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
 export function formatBRL(value: number): string {
   return value.toLocaleString('pt-BR', {
     style: 'currency',

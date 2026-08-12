@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
-import { InventoryItem, DecoraEvent } from '@/lib/types'
+import { InventoryItemWithCategory, DecoraEvent } from '@/lib/types'
 import { getConflictingEvents } from '@/lib/inventory'
 import { formatBRL } from '@/lib/utils'
 import InventoryItemForm from '@/components/InventoryItemForm'
@@ -32,15 +32,15 @@ export default function ItemDetailPage() {
   const itemId = params.itemId as string
   const supabase = createClient()
 
-  const [item, setItem] = useState<InventoryItem | null>(null)
+  const [item, setItem] = useState<InventoryItemWithCategory | null>(null)
   const [conflicts, setConflicts] = useState<DecoraEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
 
   const fetchItem = useCallback(async () => {
-    const { data } = await supabase.from('inventory_items').select('*').eq('id', itemId).single()
+    const { data } = await supabase.from('inventory_items').select('*, category:categories(*)').eq('id', itemId).single()
     if (data) {
-      setItem(data as InventoryItem)
+      setItem(data as InventoryItemWithCategory)
       const evts = await getConflictingEvents(itemId, today(), in60())
       setConflicts(evts)
     }
@@ -117,7 +117,7 @@ export default function ItemDetailPage() {
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             {[
-              { label: 'Categoria', value: item.category },
+              { label: 'Categoria', value: item.category?.name },
               { label: 'Material', value: item.material ? MATERIAL_LABELS[item.material] : null },
               { label: 'Cor', value: item.color },
               { label: 'Tamanho', value: item.size_description },

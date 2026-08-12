@@ -1,10 +1,10 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
-import { InventoryItem, ItemCategory, ItemMaterial } from '@/lib/types'
+import { InventoryItem, ItemMaterial, KitItemWithDetail, ProductCategory, TagOption } from '@/lib/types'
+import { slugify } from '@/lib/utils'
 
-const CATEGORIES: ItemCategory[] = ['aniversário', 'casamento', 'chá_bebê', 'debutante', 'outros']
 const MATERIALS: { value: ItemMaterial; label: string }[] = [
   { value: 'ceramica', label: 'Cerâmica' },
   { value: 'plastico', label: 'Plástico' },
@@ -23,35 +23,59 @@ interface Props {
 }
 
 export default function InventoryItemForm({ initial, onSaved, onClose }: Props) {
+  const supabase = createClient()
+
+  const [categories, setCategories] = useState<ProductCategory[]>([])
+  const [tagOptions, setTagOptions] = useState<TagOption[]>([])
+
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(initial?.image_url ?? null)
   const [name, setName] = useState(initial?.name ?? '')
-  const [category, setCategory] = useState<ItemCategory>(initial?.category ?? 'aniversário')
+  const [description, setDescription] = useState(initial?.description ?? '')
+  const [categoryId, setCategoryId] = useState(initial?.category_id ?? '')
+  const [isKit, setIsKit] = useState(initial?.is_kit ?? false)
+  const [slug, setSlug] = useState(initial?.slug ?? '')
+  const [slugTouched, setSlugTouched] = useState(!!initial?.slug)
   const [color, setColor] = useState(initial?.color ?? '')
   const [sizeDesc, setSizeDesc] = useState(initial?.size_description ?? '')
   const [material, setMaterial] = useState<ItemMaterial | ''>(initial?.material ?? '')
   const [qty, setQty] = useState(String(initial?.quantity_total ?? 1))
   const [replPrice, setReplPrice] = useState(String(initial?.replacement_price ?? ''))
   const [rentalPrice, setRentalPrice] = useState(String(initial?.rental_price_unit ?? ''))
-  const [tagsInput, setTagsInput] = useState(initial?.tags?.join(', ') ?? '')
+  const [selectedTags, setSelectedTags] = useState<string[]>(initial?.tags ?? [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    supabase.from('categories').select('*').order('name').then(({ data }) => setCategories((data ?? []) as ProductCategory[]))
+    supabase.from('tag_options').select('*').order('name').then(({ data }) => setTagOptions((data ?? []) as TagOption[]))
+  }, [supabase])
+
+  // Auto-preenche o slug a partir do nome até o usuário editar manualmente
+  useEffect(() => {
+    if (!slugTouched) setSlug(slugify(name))
+  }, [name, slugTouched])
 
   function pickFile(f: File) {
     setFile(f)
     setPreview(URL.createObjectURL(f))
   }
 
+  function toggleTag(tagName: string) {
+    setSelectedTags((prev) => (prev.includes(tagName) ? prev.filter((t) => t !== tagName) : [...prev, tagName]))
+  }
+
   async function handleSave() {
     if (!name.trim()) { setError('Nome é obrigatório'); return }
     if (!initial?.image_url && !file) { setError('Foto é obrigatória'); return }
     if (parseInt(qty) < 1) { setError('Quantidade deve ser ao menos 1'); return }
+    if (!categoryId) { setError('Categoria é obrigatória'); return }
+    if (!slug.trim()) { setError('URL (slug) é obrigatória'); return }
 
     setSaving(true)
     setError('')
     try {
-      const supabase = createClient()
       let imageUrl = initial?.image_url ?? ''
 
       if (file) {
@@ -63,14 +87,16 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
         imageUrl = publicUrl
       }
 
-      const tags = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
       const payload = {
         name: name.trim(),
-        category,
+        description: description.trim() || null,
+        category_id: categoryId,
+        is_kit: isKit,
+        slug: slugify(slug),
         color: color.trim() || null,
         size_description: sizeDesc.trim() || null,
         material: material || null,
-        tags,
+        tags: selectedTags,
         image_url: imageUrl,
         quantity_total: parseInt(qty),
         replacement_price: replPrice ? parseFloat(replPrice) : null,
@@ -144,12 +170,37 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
             <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Cachepô Branco MDF" />
           </div>
 
+          {/* Descrição — usada na página pública e no SEO */}
+          <div>
+            <label className="field-label">Descrição</label>
+            <textarea
+              className="field-input"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Material, cor, tamanho, para qual ocasião combina… (aparece na página pública do item)"
+            />
+          </div>
+
+          {/* URL (slug) */}
+          <div>
+            <label className="field-label">URL do item (slug)</label>
+            <input
+              className="field-input"
+              value={slug}
+              onChange={(e) => { setSlug(e.target.value); setSlugTouched(true) }}
+              placeholder="cachepô-branco-mdf"
+            />
+            <p className="text-xs mt-1" style={{ color: 'var(--light)' }}>decorafesta.app.br/produto/{slug || '...'}</p>
+          </div>
+
           {/* Categoria + Material */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">Categoria *</label>
-              <select className="field-input" value={category} onChange={(e) => setCategory(e.target.value as ItemCategory)}>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              <select className="field-input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                <option value="">Selecione…</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
@@ -160,6 +211,14 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
               </select>
             </div>
           </div>
+
+          {/* É um kit? */}
+          <label className="flex items-center gap-2 px-1 py-1 cursor-pointer">
+            <input type="checkbox" checked={isKit} onChange={(e) => setIsKit(e.target.checked)} className="w-4 h-4" />
+            <span className="text-sm font-bold" style={{ color: 'var(--dark)' }}>
+              Este item é um kit (reúne outros itens do inventário)
+            </span>
+          </label>
 
           {/* Cor + Tamanho */}
           <div className="grid grid-cols-2 gap-3">
@@ -214,15 +273,29 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
             </div>
           </div>
 
-          {/* Tags */}
+          {/* Tags pré-cadastradas */}
           <div>
-            <label className="field-label">Tags (separadas por vírgula)</label>
-            <input
-              className="field-input"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="princesa, rosa, balões, floral"
-            />
+            <label className="field-label">Tags (ocasião / público)</label>
+            <div className="flex flex-wrap gap-1.5">
+              {tagOptions.map((t) => {
+                const active = selectedTags.includes(t.slug)
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => toggleTag(t.slug)}
+                    className="px-2.5 py-1 rounded-full border text-xs font-bold transition-all"
+                    style={{
+                      borderColor: active ? 'var(--teal)' : 'var(--border)',
+                      background: active ? 'var(--teal)' : 'transparent',
+                      color: active ? '#fff' : 'var(--mid)',
+                    }}
+                  >
+                    {t.name}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {error && <p className="text-xs font-bold" style={{ color: 'var(--coral)' }}>{error}</p>}
@@ -235,8 +308,100 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
           >
             {saving ? 'Salvando…' : initial?.id ? 'Salvar alterações' : 'Adicionar ao inventário'}
           </button>
+
+          {/* Componentes do kit — só disponível depois de criado */}
+          {initial?.id && isKit && <KitComponentsEditor kitId={initial.id} />}
         </div>
       </div>
+    </div>
+  )
+}
+
+function KitComponentsEditor({ kitId }: { kitId: string }) {
+  const supabase = createClient()
+  const [components, setComponents] = useState<KitItemWithDetail[]>([])
+  const [candidates, setCandidates] = useState<InventoryItem[]>([])
+  const [addingId, setAddingId] = useState('')
+  const [addingQty, setAddingQty] = useState('1')
+  const [loading, setLoading] = useState(true)
+
+  async function fetchAll() {
+    const [{ data: comps }, { data: items }] = await Promise.all([
+      supabase.from('kit_items').select('*, component:inventory_items!kit_items_component_item_id_fkey(*)').eq('kit_id', kitId),
+      supabase.from('inventory_items').select('*').eq('active', true).eq('is_kit', false).order('name'),
+    ])
+    setComponents((comps ?? []) as KitItemWithDetail[])
+    setCandidates((items ?? []) as InventoryItem[])
+    setLoading(false)
+  }
+
+  useEffect(() => { fetchAll() }, [kitId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleAdd() {
+    if (!addingId || parseInt(addingQty) < 1) return
+    await supabase.from('kit_items').insert({
+      kit_id: kitId,
+      component_item_id: addingId,
+      quantity: parseInt(addingQty),
+    })
+    setAddingId('')
+    setAddingQty('1')
+    fetchAll()
+  }
+
+  async function handleRemove(id: string) {
+    await supabase.from('kit_items').delete().eq('id', id)
+    fetchAll()
+  }
+
+  const availableCandidates = candidates.filter((c) => !components.some((k) => k.component_item_id === c.id))
+
+  return (
+    <div className="rounded-xl p-3 mt-2" style={{ background: 'var(--bg)', border: '1.5px solid var(--border)' }}>
+      <p className="text-xs font-extrabold uppercase mb-2" style={{ color: 'var(--light)', letterSpacing: '0.5px' }}>
+        Conteúdo do kit
+      </p>
+
+      {loading ? (
+        <p className="text-xs" style={{ color: 'var(--mid)' }}>Carregando…</p>
+      ) : (
+        <>
+          {components.length === 0 && (
+            <p className="text-xs mb-2" style={{ color: 'var(--mid)' }}>Nenhum componente adicionado ainda</p>
+          )}
+          <div className="space-y-1.5 mb-2">
+            {components.map((c) => (
+              <div key={c.id} className="flex items-center justify-between text-xs bg-white rounded-lg px-2.5 py-1.5">
+                <span style={{ color: 'var(--dark)' }}>{c.quantity}x {c.component?.name}</span>
+                <button onClick={() => handleRemove(c.id)} style={{ color: 'var(--coral)' }}>remover</button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-1.5">
+            <select className="field-input flex-1" style={{ fontSize: 12 }} value={addingId} onChange={(e) => setAddingId(e.target.value)}>
+              <option value="">Adicionar item…</option>
+              {availableCandidates.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <input
+              type="number"
+              min={1}
+              className="field-input"
+              style={{ width: 56, fontSize: 12 }}
+              value={addingQty}
+              onChange={(e) => setAddingQty(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="px-3 rounded-lg text-white text-xs font-extrabold"
+              style={{ background: 'var(--teal)' }}
+            >
+              +
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

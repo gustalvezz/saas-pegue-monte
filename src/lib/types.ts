@@ -66,17 +66,34 @@ export interface Conversation {
   created_at: string
 }
 
-// --- Inventário ---
+// --- Inventário / Loja Pública ---
 
-export type ItemCategory = 'aniversário' | 'casamento' | 'chá_bebê' | 'debutante' | 'outros'
 export type ItemMaterial = 'ceramica' | 'plastico' | 'mdf' | 'acrilico' | 'led' | 'tecido' | 'lona' | 'outros'
 
-/** Physical inventory item (replaces catalog_items table) */
+/** Categoria por tipo de produto (navegação da loja) — ex: Balões, Mesas, Pegue e Monte */
+export interface ProductCategory {
+  id: string
+  name: string
+  slug: string
+  created_at: string
+}
+
+/** Tag pré-cadastrada (ocasião/público-alvo) — ex: Infantil, Menina, 15 Anos */
+export interface TagOption {
+  id: string
+  name: string
+  slug: string
+  created_at: string
+}
+
+/** Physical inventory item — pode ser um item avulso ou um kit (is_kit) */
 export interface InventoryItem {
   id: string
   name: string
   description: string | null
-  category: ItemCategory
+  category_id: string | null
+  slug: string
+  is_kit: boolean
   color: string | null
   size_description: string | null
   material: ItemMaterial | null
@@ -89,14 +106,59 @@ export interface InventoryItem {
   created_at: string
 }
 
+export interface InventoryItemWithCategory extends InventoryItem {
+  category: ProductCategory | null
+}
+
 /** InventoryItem with computed availability for a given date range */
 export interface InventoryItemWithAvail extends InventoryItem {
   quantity_available: number
 }
 
-// Keep alias so old chatbot code compiles while we migrate
-export type CatalogCategory = ItemCategory
+/** Componente de um kit ("conteúdo do kit") */
+export interface KitItem {
+  id: string
+  kit_id: string
+  component_item_id: string
+  quantity: number
+  created_at: string
+}
+
+export interface KitItemWithDetail extends KitItem {
+  component: InventoryItem
+}
+
 export type CatalogItem = InventoryItem
+
+// --- Clientes / Contratos (Loja Pública) ---
+
+export interface Customer {
+  id: string
+  name: string
+  cpf: string
+  rg: string | null
+  phone: string
+  email: string
+  address: string
+  reference_name: string | null
+  reference_phone: string | null
+  created_at: string
+}
+
+export type SpaceType = 'interno' | 'externo' | 'misto'
+export type ReturnShipping = 'locataria' | 'locadora' | 'retirada_locadora'
+
+export interface Contract {
+  id: string
+  event_id: string
+  pdf_url: string | null
+  signature_image_url: string | null
+  signer_ip: string | null
+  signer_user_agent: string | null
+  signed_at: string | null
+  sign_token: string | null
+  created_at: string
+}
 
 // --- Eventos / Contratos ---
 
@@ -105,15 +167,22 @@ export type EventStatus = 'cotacao' | 'confirmado' | 'em_andamento' | 'concluido
 export interface DecoraEvent {
   id: string
   lead_id: string | null
+  customer_id: string | null
   client_name: string
   client_phone: string | null
   event_type: EventType | null
   event_date: string
   pickup_date: string
   return_date: string
+  pickup_time: string | null
+  return_deadline_time: string | null
   venue: string | null
   theme_notes: string | null
   guest_count: number | null
+  space_type: SpaceType | null
+  delivery_fee: number
+  return_shipping: ReturnShipping | null
+  deposit_amount: number | null
   status: EventStatus
   notes: string | null
   google_event_id: string | null
