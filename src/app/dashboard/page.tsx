@@ -155,16 +155,12 @@ export default function DashboardPage() {
 
         {/* HEADER */}
         <div className="flex items-center gap-3 mb-5 flex-wrap">
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, var(--teal), var(--purple-dark))' }}
-          >
-            🎈
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Decora Festa" className="h-10 w-auto flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-black leading-tight" style={{ color: 'var(--dark)' }}>
-              Decora Festa <span style={{ color: 'var(--teal)' }}>· Financeiro</span>
-            </h1>
+            <p className="text-xs font-extrabold uppercase tracking-wide" style={{ color: 'var(--teal)' }}>
+              Financeiro
+            </p>
             <p className="text-xs truncate" style={{ color: 'var(--mid)' }}>{userEmail}</p>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">

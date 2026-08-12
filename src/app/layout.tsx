@@ -11,8 +11,8 @@ export const metadata: Metadata = {
     title: 'Decora Festa',
   },
   icons: {
-    icon: '/icons/icon-192.svg',
-    apple: '/icons/icon-192.svg',
+    icon: '/favicon.ico',
+    apple: '/icons/icon-192.png',
   },
 }
 

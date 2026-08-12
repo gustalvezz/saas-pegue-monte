@@ -258,7 +258,9 @@ supabase/
 public/
 ├── manifest.json             # PWA manifest
 ├── sw.js                     # service worker
-└── icons/
+├── logo.png                  # logo completo (wordmark + balões), fundo transparente, usado nos headers
+├── favicon.ico                # ícone da aba do navegador (recorte só dos balões)
+└── icons/                    # ícones PWA 192x192 / 512x512 (mesmo recorte dos balões, fundo branco)
 .github/workflows/keep-alive.yml  # ping periódico na Evolution API (Render free tier)
 ```
 

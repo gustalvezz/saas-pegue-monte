@@ -33,13 +33,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-lg"
-            style={{ background: 'linear-gradient(135deg, var(--teal), var(--purple-dark))' }}
-          >
-            🎈
-          </div>
-          <h1 className="text-2xl font-black text-brand-dark">Decora Festa</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Decora Festa" className="h-24 w-auto mb-2" />
           <p className="text-sm text-brand-mid mt-1">Controle Financeiro</p>
         </div>
 
