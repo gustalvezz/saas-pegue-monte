@@ -27,6 +27,10 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
 
   const [categories, setCategories] = useState<ProductCategory[]>([])
   const [tagOptions, setTagOptions] = useState<TagOption[]>([])
+  const [newCategoryOpen, setNewCategoryOpen] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryError, setNewCategoryError] = useState('')
+  const [creatingCategory, setCreatingCategory] = useState(false)
 
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(initial?.image_url ?? null)
@@ -64,6 +68,29 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
 
   function toggleTag(tagName: string) {
     setSelectedTags((prev) => (prev.includes(tagName) ? prev.filter((t) => t !== tagName) : [...prev, tagName]))
+  }
+
+  async function handleCreateCategory() {
+    const name = newCategoryName.trim()
+    if (!name) { setNewCategoryError('Digite um nome'); return }
+    const slug = slugify(name)
+    if (categories.some((c) => c.slug === slug)) { setNewCategoryError('Já existe uma categoria com esse nome'); return }
+
+    setCreatingCategory(true)
+    setNewCategoryError('')
+    try {
+      const { data, error: insErr } = await supabase.from('categories').insert({ name, slug }).select().single()
+      if (insErr) throw insErr
+      const created = data as ProductCategory
+      setCategories((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+      setCategoryId(created.id)
+      setNewCategoryOpen(false)
+      setNewCategoryName('')
+    } catch (e: unknown) {
+      setNewCategoryError(e instanceof Error ? e.message : 'Erro ao criar categoria')
+    } finally {
+      setCreatingCategory(false)
+    }
   }
 
   async function handleSave() {
@@ -198,10 +225,51 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">Categoria *</label>
-              <select className="field-input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+              <select
+                className="field-input"
+                value={categoryId}
+                onChange={(e) => {
+                  if (e.target.value === '__new__') { setNewCategoryOpen(true); return }
+                  setCategoryId(e.target.value)
+                }}
+              >
                 <option value="">Selecione…</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                <option value="__new__">+ Nova categoria…</option>
               </select>
+
+              {newCategoryOpen && (
+                <div className="mt-2 p-2.5 rounded-lg" style={{ background: 'var(--bg)', border: '1.5px solid var(--border)' }}>
+                  <label className="field-label">Nome da nova categoria</label>
+                  <input
+                    className="field-input"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Ex: Painéis Temáticos"
+                    autoFocus
+                  />
+                  {newCategoryError && <p className="text-xs font-bold mt-1" style={{ color: 'var(--coral)' }}>{newCategoryError}</p>}
+                  <div className="flex gap-1.5 mt-2">
+                    <button
+                      type="button"
+                      onClick={handleCreateCategory}
+                      disabled={creatingCategory}
+                      className="flex-1 py-1.5 rounded-lg text-white text-xs font-extrabold disabled:opacity-60"
+                      style={{ background: 'var(--teal)' }}
+                    >
+                      {creatingCategory ? 'Criando…' : 'Criar e usar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setNewCategoryOpen(false); setNewCategoryName(''); setNewCategoryError('') }}
+                      className="px-3 py-1.5 rounded-lg border text-xs font-bold"
+                      style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="field-label">Material</label>
