@@ -413,7 +413,7 @@ Browser (PWA)
 
 ### v4.0 — Loja Pública (próxima, prioridade máxima)
 Plano completo na seção 11. Resumo das fases:
-- [ ] Fase 1 — Fundação pública (schema, RLS pública, páginas de catálogo/produto/kit com SEO completo)
+- [x] Fase 1 — Fundação pública (schema, RLS pública, páginas de catálogo/produto/kit com SEO completo)
 - [ ] Fase 2 — Fluxo de pedido (seletor de itens, cadastro do cliente, cotação pendente, email via Resend)
 - [ ] Fase 3 — Dashboard de pedidos pendentes
 - [ ] Fase 4 — Contrato em PDF + assinatura eletrônica simples + sync automático com Google Agenda

@@ -2,7 +2,7 @@
 
 Micro SaaS de **locação de decorações para festas**. O core do produto é fechar negócios: uma vitrine pública (planejada, ver `PRD.md` seção 11) onde o cliente monta um pedido de locação (kits prontos ou itens avulsos) e envia uma cotação — mais um painel interno para a proprietária gerenciar inventário, eventos, atendimento via WhatsApp e financeiro.
 
-> A loja pública ainda não está implementada — o que existe hoje é o painel interno (financeiro, atendimento, inventário, eventos). O plano completo da loja está documentado em `PRD.md`.
+> A vitrine pública (navegação por categoria, página de produto/kit, SEO) já está no ar. O fluxo de pedido/cotação (Fase 2 do plano) ainda não — por enquanto o botão "Fazer pedido" fica desabilitado. Plano completo em `PRD.md`, seção 11.
 
 ---
 
@@ -63,6 +63,14 @@ Micro SaaS de **locação de decorações para festas**. O core do produto é fe
 
 - Unificado com o módulo Inventário (`/dashboard/catalogo` redireciona para `/dashboard/inventario`)
 - **Bot envia fotos** relevantes do inventário durante a conversa com o lead
+
+### Loja Pública (vitrine)
+
+- **Home, categoria e produto/kit** — `/`, `/categoria/[slug]`, `/produto/[slug]`, acessíveis sem login
+- **Kits com "conteúdo do kit"** — página do kit lista os itens que o compõem
+- **SEO completo** — metadados dinâmicos por página, Open Graph, JSON-LD (Organization/Product/BreadcrumbList), `sitemap.xml`, `robots.txt`, `llms.txt`
+- **Categorias por tipo de produto** (não mais por tipo de festa) e **tags pré-cadastradas** (infantil, menina, 15 anos…) geridas no formulário de item do Inventário
+- Fluxo de pedido/cotação ainda não implementado (Fase 2) — botão "Fazer pedido" desabilitado por enquanto
 
 ### Categorias de transações
 
@@ -289,3 +297,4 @@ npm run lint     # ESLint
 | 3.2.0 | 2026-07-23 | Migração de deploy: Render → Vercel (funções serverless, `maxDuration` estendido nas rotas de API) |
 | 3.2.1 | 2026-08-12 | Aplica logo oficial (favicon, ícones PWA, headers do login e dashboard) no lugar do ícone placeholder |
 | 4.0.0 | 2026-08-12 | Reposiciona o produto (core = vitrine pública de locação, não controle financeiro) e documenta o plano completo da Loja Pública no PRD.md — planejamento apenas, implementação ainda não iniciada |
+| 4.1.0 | 2026-08-12 | Fundação da Loja Pública (Fase 1): categorias por tipo de produto, tags pré-cadastradas e kits no admin; migrations 007/008; vitrine pública (home, categoria, produto/kit) com SEO completo — sitemap, robots, llms.txt, JSON-LD |
