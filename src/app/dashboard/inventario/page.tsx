@@ -175,20 +175,6 @@ export default function InventarioPage() {
         />
       )}
 
-      <style jsx global>{`
-        .field-label {
-          display: block; font-size: 10px; font-weight: 800;
-          text-transform: uppercase; letter-spacing: 0.5px;
-          color: var(--light); margin-bottom: 4px;
-        }
-        .field-input {
-          width: 100%; padding: 8px 10px;
-          border: 1.5px solid var(--border); border-radius: 8px;
-          font-size: 13px; font-family: 'Nunito', sans-serif;
-          font-weight: 600; color: var(--dark); background: #fff; outline: none;
-        }
-        .field-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(78,205,196,0.15); }
-      `}</style>
     </div>
   )
 }
