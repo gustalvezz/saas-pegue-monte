@@ -1,0 +1,187 @@
+import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import Image from 'next/image'
+import PublicHeader from '@/components/PublicHeader'
+import ProductCard from '@/components/ProductCard'
+import { getAllItemSlugs, getItemBySlug, getKitComponents, getRelatedItems } from '@/lib/store'
+import { formatBRL } from '@/lib/utils'
+
+export const revalidate = 300
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://decorafesta.app.br'
+
+interface Props {
+  params: { slug: string }
+}
+
+export async function generateStaticParams() {
+  const slugs = await getAllItemSlugs()
+  return slugs.map((s) => ({ slug: s.slug }))
+}
+
+function buildDescription(item: { description: string | null; name: string; color: string | null; size_description: string | null; is_kit: boolean }) {
+  if (item.description) return item.description
+  const parts = [
+    item.is_kit ? `Kit ${item.name}` : item.name,
+    item.color ? `na cor ${item.color}` : null,
+    item.size_description ? `tamanho ${item.size_description}` : null,
+  ].filter(Boolean)
+  return `${parts.join(', ')} — disponível para locação na Decora Festa.`
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const item = await getItemBySlug(params.slug)
+  if (!item) return {}
+
+  const description = buildDescription(item)
+  const title = `${item.name} para Locação | Decora Festa`
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `${APP_URL}/produto/${item.slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `${APP_URL}/produto/${item.slug}`,
+      images: [item.image_url],
+      type: 'website',
+    },
+  }
+}
+
+export default async function ProductPage({ params }: Props) {
+  const item = await getItemBySlug(params.slug)
+  if (!item) notFound()
+
+  const [kitComponents, related] = await Promise.all([
+    item.is_kit ? getKitComponents(item.id) : Promise.resolve([]),
+    getRelatedItems(item.category_id, item.id, 4),
+  ])
+
+  const description = buildDescription(item)
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: item.name,
+    description,
+    image: item.image_url,
+    category: item.category?.name,
+    offers: item.rental_price_unit != null ? {
+      '@type': 'Offer',
+      price: item.rental_price_unit,
+      priceCurrency: 'BRL',
+      availability: 'https://schema.org/InStock',
+      url: `${APP_URL}/produto/${item.slug}`,
+    } : undefined,
+  }
+
+  return (
+    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+
+      <PublicHeader />
+
+      <main className="max-w-5xl mx-auto px-3 sm:px-5 py-6">
+        <nav className="text-xs mb-3" style={{ color: 'var(--light)' }} aria-label="breadcrumb">
+          <Link href="/" style={{ color: 'var(--mid)' }}>Início</Link>
+          {item.category && (
+            <> / <Link href={`/categoria/${item.category.slug}`} style={{ color: 'var(--mid)' }}>{item.category.name}</Link></>
+          )}
+          {' / '}{item.name}
+        </nav>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="relative rounded-2xl overflow-hidden" style={{ aspectRatio: '1 / 1', background: '#fff' }}>
+            <Image src={item.image_url} alt={item.name} fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover" priority />
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              {item.is_kit && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold" style={{ background: 'var(--purple-l)', color: 'var(--purple-dark)' }}>
+                  Kit
+                </span>
+              )}
+              {item.category && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold" style={{ background: 'var(--teal-l)', color: 'var(--teal-d)' }}>
+                  {item.category.name}
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-2xl font-black mb-2" style={{ color: 'var(--dark)' }}>{item.name}</h1>
+
+            {item.rental_price_unit != null && (
+              <p className="text-2xl font-black mb-4" style={{ color: 'var(--green-dark)' }}>
+                {formatBRL(item.rental_price_unit)}
+              </p>
+            )}
+
+            <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--mid)' }}>{description}</p>
+
+            <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+              {item.color && (
+                <div>
+                  <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--light)' }}>Cor</p>
+                  <p style={{ color: 'var(--dark)' }}>{item.color}</p>
+                </div>
+              )}
+              {item.size_description && (
+                <div>
+                  <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--light)' }}>Tamanho</p>
+                  <p style={{ color: 'var(--dark)' }}>{item.size_description}</p>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              disabled
+              className="block w-full text-center py-3 rounded-xl text-white font-extrabold text-sm opacity-50 cursor-not-allowed"
+              style={{ background: 'var(--teal)' }}
+            >
+              Fazer pedido (em breve)
+            </button>
+            <p className="text-xs text-center mt-2" style={{ color: 'var(--light)' }}>
+              A reserva online chega na próxima atualização da loja.
+            </p>
+          </div>
+        </div>
+
+        {/* Conteúdo do kit */}
+        {item.is_kit && kitComponents.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-lg font-black mb-1" style={{ color: 'var(--dark)' }}>Conteúdo do kit</h2>
+            <p className="text-xs mb-3" style={{ color: 'var(--light)' }}>Este kit reúne {kitComponents.length} itens</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {kitComponents.map((k) => (
+                <div key={k.id} className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)', background: '#fff' }}>
+                  <div className="relative" style={{ aspectRatio: '1 / 1' }}>
+                    <Image src={k.component.image_url} alt={k.component.name} fill sizes="200px" className="object-cover" />
+                  </div>
+                  <p className="text-xs font-bold px-2 py-1.5 truncate" style={{ color: 'var(--dark)' }}>
+                    {k.quantity}x {k.component.name}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Itens relacionados */}
+        {related.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-lg font-black mb-3" style={{ color: 'var(--dark)' }}>Você também pode gostar</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {related.map((r) => <ProductCard key={r.id} item={r} />)}
+            </div>
+          </section>
+        )}
+      </main>
+    </div>
+  )
+}

@@ -1,0 +1,19 @@
+# Decora Festa
+
+> Locação de decorações para festas em Jundiaí/SP. Kits prontos ("pegue e monte") ou itens avulsos para alugar, com fotos, preços e disponibilidade no catálogo online.
+
+Decora Festa é uma empresa de locação de decorações para festas infantis e adultas — aniversários, chá de bebê, debutantes, casamentos e outras ocasiões. O catálogo público permite navegar por categoria de produto (balões, mesas, painéis, vasos, kits prontos) e ver preços de locação de cada item.
+
+## Páginas principais
+
+- Início (/): catálogo completo, organizado por categoria
+- Categorias (/categoria/{slug}): listagem de itens de uma categoria de produto
+- Produtos e kits (/produto/{slug}): detalhes de um item avulso ou de um kit pronto, incluindo, quando aplicável, a lista de itens que compõem o kit
+
+## Sobre kits "pegue e monte"
+
+Um kit reúne vários itens de decoração com um preço de locação próprio. A página de cada kit lista os componentes inclusos.
+
+## Contato
+
+Reservas e dúvidas são atendidas via WhatsApp. Reserva 100% online está em desenvolvimento.
