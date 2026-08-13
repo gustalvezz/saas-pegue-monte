@@ -49,6 +49,8 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
   const [selectedTags, setSelectedTags] = useState<string[]>(initial?.tags ?? [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [savedId, setSavedId] = useState(initial?.id ?? null)
+  const [justCreatedKit, setJustCreatedKit] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -131,16 +133,23 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
         active: true,
       }
 
-      if (initial?.id) {
-        const { error: updErr } = await supabase.from('inventory_items').update(payload).eq('id', initial.id)
+      if (savedId) {
+        const { error: updErr } = await supabase.from('inventory_items').update(payload).eq('id', savedId)
         if (updErr) throw updErr
+        onSaved()
+        onClose()
       } else {
-        const { error: insErr } = await supabase.from('inventory_items').insert(payload)
+        const { data: inserted, error: insErr } = await supabase.from('inventory_items').insert(payload).select().single()
         if (insErr) throw insErr
+        onSaved()
+        if (isKit) {
+          // Mantém o modal aberto, agora em modo edição, pra já vincular os componentes do kit
+          setSavedId((inserted as InventoryItem).id)
+          setJustCreatedKit(true)
+        } else {
+          onClose()
+        }
       }
-
-      onSaved()
-      onClose()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro ao salvar')
     } finally {
@@ -157,10 +166,16 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <h2 className="font-black text-base" style={{ color: 'var(--dark)' }}>
-            {initial?.id ? 'Editar item' : 'Novo item do inventário'}
+            {savedId ? 'Editar item' : 'Novo item do inventário'}
           </h2>
           <button onClick={onClose} style={{ color: 'var(--mid)' }} className="text-xl leading-none">✕</button>
         </div>
+
+        {justCreatedKit && (
+          <div className="mx-5 mb-2 px-3 py-2 rounded-lg text-xs font-bold" style={{ background: 'var(--teal-l)', color: 'var(--teal-d)' }}>
+            ✅ Kit criado! Agora adicione os itens que compõem ele logo abaixo.
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-3">
           {/* Photo + camera */}
@@ -374,11 +389,22 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
             className="w-full py-3 rounded-xl text-white font-extrabold text-sm disabled:opacity-50"
             style={{ background: 'var(--teal)' }}
           >
-            {saving ? 'Salvando…' : initial?.id ? 'Salvar alterações' : 'Adicionar ao inventário'}
+            {saving ? 'Salvando…' : savedId ? 'Salvar alterações' : 'Adicionar ao inventário'}
           </button>
 
           {/* Componentes do kit — só disponível depois de criado */}
-          {initial?.id && isKit && <KitComponentsEditor kitId={initial.id} />}
+          {savedId && isKit && <KitComponentsEditor kitId={savedId} />}
+
+          {justCreatedKit && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl border text-sm font-extrabold"
+              style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
+            >
+              Concluir
+            </button>
+          )}
         </div>
       </div>
     </div>
