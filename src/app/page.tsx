@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import PublicHeader from '@/components/PublicHeader'
+import HeroCarousel from '@/components/HeroCarousel'
 import FeaturedCategoryTabs from '@/components/FeaturedCategoryTabs'
-import { getCategories, getItemsGroupedByCategory } from '@/lib/store'
+import { getCategories, getHeroImages, getItemsGroupedByCategory } from '@/lib/store'
 
 export const revalidate = 300
 
@@ -24,9 +25,10 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const [categories, itemsByCategory] = await Promise.all([
+  const [categories, itemsByCategory, heroImages] = await Promise.all([
     getCategories(),
     getItemsGroupedByCategory(10),
+    getHeroImages(4),
   ])
 
   const jsonLd = {
@@ -44,6 +46,8 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <PublicHeader />
+
+      <HeroCarousel images={heroImages} />
 
       {/* Hero */}
       <section className="text-center py-8 sm:py-12 px-3">

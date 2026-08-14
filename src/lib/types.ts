@@ -145,6 +145,14 @@ export interface Customer {
   created_at: string
 }
 
+export interface HeroImage {
+  id: string
+  image_url: string
+  display_order: number
+  active: boolean
+  created_at: string
+}
+
 export type SpaceType = 'interno' | 'externo' | 'misto'
 export type ReturnShipping = 'locataria' | 'locadora' | 'retirada_locadora'
 

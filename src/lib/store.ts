@@ -1,5 +1,5 @@
 import { createPublicSupabase } from '@/lib/supabase-public'
-import { InventoryItem, InventoryItemWithCategory, KitItemWithDetail, ProductCategory } from '@/lib/types'
+import { HeroImage, InventoryItem, InventoryItemWithCategory, KitItemWithDetail, ProductCategory } from '@/lib/types'
 
 /** Consultas públicas do catálogo (loja) — usam o client público (sem
  * cookies), que respeita as policies de leitura pública (anon) do Supabase
@@ -99,6 +99,34 @@ export async function getItemsGroupedByCategory(perCategory = 10): Promise<Recor
     }
     return grouped
   }, {})
+}
+
+/** Fotos do carrossel do hero, escolhidas pela Flávia no dashboard. Se ela
+ * ainda não cadastrou nenhuma, usa as fotos dos kits como padrão inicial —
+ * assim o hero já nasce populado sem exigir upload manual. */
+export async function getHeroImages(limit = 4): Promise<string[]> {
+  return safe(async () => {
+    const supabase = createPublicSupabase()
+    const { data } = await supabase
+      .from('hero_images')
+      .select('*')
+      .eq('active', true)
+      .order('display_order')
+      .limit(limit)
+
+    const configured = (data ?? []) as HeroImage[]
+    if (configured.length > 0) return configured.map((h) => h.image_url)
+
+    const { data: kits } = await supabase
+      .from('inventory_items')
+      .select('image_url')
+      .eq('active', true)
+      .eq('is_kit', true)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    return (kits ?? []).map((k) => k.image_url as string)
+  }, [])
 }
 
 export async function getAllItemSlugs(): Promise<{ slug: string }[]> {

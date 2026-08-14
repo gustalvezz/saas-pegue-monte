@@ -185,6 +185,13 @@ export default function DashboardPage() {
             >
               💬 Leads
             </Link>
+            <Link
+              href="/dashboard/vitrine"
+              className="px-2.5 py-1.5 rounded-lg border text-xs font-bold"
+              style={{ borderColor: 'var(--coral)', color: 'var(--coral)', background: 'var(--coral-l)' }}
+            >
+              🖼️ Vitrine
+            </Link>
             {googleConnected ? (
               <button
                 onClick={handleGoogleDisconnect}
