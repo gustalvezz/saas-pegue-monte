@@ -48,7 +48,9 @@ export default async function HomePage() {
 
       <PublicHeader />
 
-      <HeroCarousel images={heroImages} />
+      <div className="max-w-6xl mx-auto px-3 sm:px-5 pt-4">
+        <HeroCarousel images={heroImages} />
+      </div>
 
       {/* Hero */}
       <section className="text-center py-5 sm:py-7 px-3">
