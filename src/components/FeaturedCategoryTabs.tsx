@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import ProductCard from '@/components/ProductCard'
+import Eyebrow from '@/components/Eyebrow'
 import { InventoryItem, ProductCategory } from '@/lib/types'
 
 interface Props {
@@ -22,8 +23,9 @@ export default function FeaturedCategoryTabs({ categories, itemsByCategory }: Pr
   if (withItems.length === 0) return null
 
   return (
-    <section id="categorias" className="scroll-mt-20">
-      <h2 className="text-lg font-black mb-3" style={{ color: 'var(--dark)' }}>Destaques</h2>
+    <section id="categorias" className="py-8 scroll-mt-20">
+      <Eyebrow>O que decoramos</Eyebrow>
+      <h2 className="font-display text-2xl font-semibold mb-5" style={{ color: 'var(--store-ink)' }}>Destaques</h2>
 
       {/* Abas de categoria */}
       <div className="relative mb-4">
@@ -40,9 +42,9 @@ export default function FeaturedCategoryTabs({ categories, itemsByCategory }: Pr
                 onClick={() => setActiveId(c.id)}
                 className="flex-shrink-0 px-3.5 py-1.5 rounded-full border text-xs font-extrabold transition-all"
                 style={{
-                  borderColor: active ? 'var(--teal)' : 'var(--border)',
-                  background: active ? 'var(--teal)' : '#fff',
-                  color: active ? '#fff' : 'var(--mid)',
+                  borderColor: active ? 'var(--store-teal-d)' : 'var(--store-line)',
+                  background: active ? 'var(--store-teal-d)' : 'var(--store-paper)',
+                  color: active ? '#fff' : 'var(--store-ink-soft)',
                 }}
               >
                 {c.name}
@@ -57,11 +59,11 @@ export default function FeaturedCategoryTabs({ categories, itemsByCategory }: Pr
           onClick={() => scrollTabs(1)}
           aria-label="Ver mais categorias"
           className="hidden sm:flex absolute right-0 top-0 bottom-0 w-9 items-center justify-center rounded-full flex-shrink-0"
-          style={{ background: 'linear-gradient(to right, transparent, var(--bg) 40%)' }}
+          style={{ background: 'linear-gradient(to right, transparent, var(--store-blush) 40%)' }}
         >
           <span
             className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-black shadow-sm"
-            style={{ background: '#fff', color: 'var(--teal-d)', border: '1.5px solid var(--border)' }}
+            style={{ background: 'var(--store-paper)', color: 'var(--store-teal-d)', border: '1.5px solid var(--store-line)' }}
           >
             →
           </span>
@@ -75,7 +77,7 @@ export default function FeaturedCategoryTabs({ categories, itemsByCategory }: Pr
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-3">
             {itemsByCategory[c.id].map((item) => <ProductCard key={item.id} item={item} />)}
           </div>
-          <Link href={`/categoria/${c.slug}`} className="text-xs font-extrabold" style={{ color: 'var(--teal-d)' }}>
+          <Link href={`/categoria/${c.slug}`} className="text-xs font-extrabold" style={{ color: 'var(--store-teal-d)' }}>
             Ver tudo em {c.name} →
           </Link>
         </div>

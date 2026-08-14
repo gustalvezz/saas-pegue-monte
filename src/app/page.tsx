@@ -2,8 +2,12 @@ import type { Metadata } from 'next'
 import PublicHeader from '@/components/PublicHeader'
 import HeroCarousel from '@/components/HeroCarousel'
 import HeroSearchBar from '@/components/HeroSearchBar'
+import MarqueeStrip from '@/components/MarqueeStrip'
 import HowItWorks from '@/components/HowItWorks'
+import Differentials from '@/components/Differentials'
 import FeaturedCategoryTabs from '@/components/FeaturedCategoryTabs'
+import FAQSection, { buildFaqJsonLd } from '@/components/FAQSection'
+import Footer from '@/components/Footer'
 import { getCategories, getHeroImages, getItemsGroupedByCategory } from '@/lib/store'
 
 export const revalidate = 300
@@ -33,19 +37,12 @@ export default async function HomePage() {
     getHeroImages(4),
   ])
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'Decora Festa',
-    url: APP_URL,
-    logo: `${APP_URL}/logo.png`,
-    description: 'Locação de decorações para festas — kits prontos ou itens avulsos.',
-  }
+  const faqJsonLd = buildFaqJsonLd()
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
+    <div className="min-h-screen store-bg">
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
       <PublicHeader />
 
@@ -56,19 +53,24 @@ export default async function HomePage() {
 
       {/* Hero */}
       <section className="text-center py-5 sm:py-7 px-3">
-        <h1 className="text-2xl sm:text-4xl font-black leading-tight" style={{ color: 'var(--dark)' }}>
-          Decoração de festa, <span style={{ color: 'var(--teal)' }}>pegue e monte</span>
+        <h1 className="font-display text-2xl sm:text-4xl font-semibold leading-tight" style={{ color: 'var(--store-ink)' }}>
+          Decoração de festa, <span className="font-script text-3xl sm:text-5xl" style={{ color: 'var(--store-pink)' }}>pegue e monte</span>
         </h1>
-        <p className="mt-3 text-sm sm:text-base max-w-xl mx-auto" style={{ color: 'var(--mid)' }}>
+        <p className="mt-3 text-sm sm:text-base max-w-xl mx-auto" style={{ color: 'var(--store-ink-soft)' }}>
           Kits prontos ou itens avulsos para locação. Escolha, informe a data do seu evento e reserve online.
         </p>
       </section>
 
-      <HowItWorks />
+      <MarqueeStrip />
 
-      <main className="max-w-6xl mx-auto px-3 sm:px-5 pb-10">
+      <main className="max-w-6xl mx-auto px-3 sm:px-5">
+        <HowItWorks />
+        <Differentials />
         <FeaturedCategoryTabs categories={categories} itemsByCategory={itemsByCategory} />
+        <FAQSection />
       </main>
+
+      <Footer />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import SafeImage from '@/components/SafeImage'
 import PublicHeader from '@/components/PublicHeader'
 import ProductCard from '@/components/ProductCard'
+import Footer from '@/components/Footer'
 import { getAllItemSlugs, getItemBySlug, getKitComponents, getRelatedItems, getTagOptions } from '@/lib/store'
 import { formatBRL } from '@/lib/utils'
 import { TagOption } from '@/lib/types'
@@ -97,61 +98,61 @@ export default async function ProductPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
+    <div className="min-h-screen store-bg">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <PublicHeader />
 
       <main className="max-w-5xl mx-auto px-3 sm:px-5 py-6">
-        <nav className="text-xs mb-3" style={{ color: 'var(--light)' }} aria-label="breadcrumb">
-          <Link href="/" style={{ color: 'var(--mid)' }}>Início</Link>
+        <nav className="text-xs mb-3" style={{ color: 'var(--store-ink-soft)' }} aria-label="breadcrumb">
+          <Link href="/" style={{ color: 'var(--store-ink-soft)' }}>Início</Link>
           {item.category && (
-            <> / <Link href={`/categoria/${item.category.slug}`} style={{ color: 'var(--mid)' }}>{item.category.name}</Link></>
+            <> / <Link href={`/categoria/${item.category.slug}`} style={{ color: 'var(--store-ink-soft)' }}>{item.category.name}</Link></>
           )}
           {' / '}{item.name}
         </nav>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="relative rounded-2xl overflow-hidden" style={{ aspectRatio: '1 / 1', background: '#fff' }}>
+          <div className="relative rounded-2xl overflow-hidden" style={{ aspectRatio: '1 / 1', background: 'var(--store-paper)' }}>
             <SafeImage src={item.image_url} alt={item.name} fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover" priority />
           </div>
 
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               {item.is_kit && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold" style={{ background: 'var(--purple-l)', color: 'var(--purple-dark)' }}>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold" style={{ background: 'var(--store-purple-l)', color: 'var(--store-purple)' }}>
                   Kit
                 </span>
               )}
               {item.category && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold" style={{ background: 'var(--teal-l)', color: 'var(--teal-d)' }}>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold" style={{ background: '#D8F0EC', color: 'var(--store-teal-d)' }}>
                   {item.category.name}
                 </span>
               )}
             </div>
 
-            <h1 className="text-2xl font-black mb-2" style={{ color: 'var(--dark)' }}>{item.name}</h1>
+            <h1 className="font-display text-2xl font-semibold mb-2" style={{ color: 'var(--store-ink)' }}>{item.name}</h1>
 
             {item.rental_price_unit != null && (
-              <p className="text-2xl font-black mb-4" style={{ color: 'var(--green-dark)' }}>
+              <p className="text-2xl font-black mb-4" style={{ color: 'var(--store-teal-d)' }}>
                 {formatBRL(item.rental_price_unit)}
               </p>
             )}
 
-            <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--mid)' }}>{description}</p>
+            <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--store-ink-soft)' }}>{description}</p>
 
             <div className="grid grid-cols-2 gap-3 text-sm mb-4">
               {item.color && (
                 <div>
-                  <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--light)' }}>Cor</p>
-                  <p style={{ color: 'var(--dark)' }}>{item.color}</p>
+                  <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--store-ink-soft)' }}>Cor</p>
+                  <p style={{ color: 'var(--store-ink)' }}>{item.color}</p>
                 </div>
               )}
               {item.size_description && (
                 <div>
-                  <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--light)' }}>Tamanho</p>
-                  <p style={{ color: 'var(--dark)' }}>{item.size_description}</p>
+                  <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--store-ink-soft)' }}>Tamanho</p>
+                  <p style={{ color: 'var(--store-ink)' }}>{item.size_description}</p>
                 </div>
               )}
             </div>
@@ -159,7 +160,7 @@ export default async function ProductPage({ params }: Props) {
             {tagNames.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {tagNames.map((name) => (
-                  <span key={name} className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: 'var(--bg)', color: 'var(--mid)' }}>
+                  <span key={name} className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: 'var(--store-blush)', color: 'var(--store-ink-soft)' }}>
                     #{name}
                   </span>
                 ))}
@@ -170,11 +171,11 @@ export default async function ProductPage({ params }: Props) {
               type="button"
               disabled
               className="block w-full text-center py-3 rounded-xl text-white font-extrabold text-sm opacity-50 cursor-not-allowed"
-              style={{ background: 'var(--teal)' }}
+              style={{ background: 'var(--store-teal-d)' }}
             >
               Fazer pedido (em breve)
             </button>
-            <p className="text-xs text-center mt-2" style={{ color: 'var(--light)' }}>
+            <p className="text-xs text-center mt-2" style={{ color: 'var(--store-ink-soft)' }}>
               A reserva online chega na próxima atualização da loja.
             </p>
           </div>
@@ -183,15 +184,15 @@ export default async function ProductPage({ params }: Props) {
         {/* Conteúdo do kit */}
         {item.is_kit && kitComponents.length > 0 && (
           <section className="mt-10">
-            <h2 className="text-lg font-black mb-1" style={{ color: 'var(--dark)' }}>Conteúdo do kit</h2>
-            <p className="text-xs mb-3" style={{ color: 'var(--light)' }}>Este kit reúne {kitComponents.length} itens</p>
+            <h2 className="font-display text-lg font-semibold mb-1" style={{ color: 'var(--store-ink)' }}>Conteúdo do kit</h2>
+            <p className="text-xs mb-3" style={{ color: 'var(--store-ink-soft)' }}>Este kit reúne {kitComponents.length} itens</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {kitComponents.map((k) => (
-                <div key={k.id} className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)', background: '#fff' }}>
+                <div key={k.id} className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--store-line)', background: 'var(--store-paper)' }}>
                   <div className="relative" style={{ aspectRatio: '1 / 1' }}>
                     <SafeImage src={k.component.image_url} alt={k.component.name} fill sizes="200px" className="object-cover" />
                   </div>
-                  <p className="text-xs font-bold px-2 py-1.5 truncate" style={{ color: 'var(--dark)' }}>
+                  <p className="text-xs font-bold px-2 py-1.5 truncate" style={{ color: 'var(--store-ink)' }}>
                     {k.quantity}x {k.component.name}
                   </p>
                 </div>
@@ -203,13 +204,15 @@ export default async function ProductPage({ params }: Props) {
         {/* Itens relacionados */}
         {related.length > 0 && (
           <section className="mt-10">
-            <h2 className="text-lg font-black mb-3" style={{ color: 'var(--dark)' }}>Você também pode gostar</h2>
+            <h2 className="font-display text-lg font-semibold mb-3" style={{ color: 'var(--store-ink)' }}>Você também pode gostar</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {related.map((r) => <ProductCard key={r.id} item={r} />)}
             </div>
           </section>
         )}
       </main>
+
+      <Footer />
     </div>
   )
 }

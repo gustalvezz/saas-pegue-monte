@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Caveat:wght@700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -22,6 +22,21 @@
   --light: #AAAABC;
   --border: #E6DDF0;
   --bg: #FFF8FC;
+
+  /* Paleta da loja pública — não usada no painel interno */
+  --store-blush: #F7ECE6;
+  --store-paper: #FFFBF7;
+  --store-pink: #E96F9E;
+  --store-pink-l: #F6C6D9;
+  --store-purple: #9C87D9;
+  --store-purple-l: #DAD0F5;
+  --store-teal: #5FC2B8;
+  --store-teal-d: #3E9E93;
+  --store-gold: #C99A4A;
+  --store-gold-l: #E6C692;
+  --store-ink: #332830;
+  --store-ink-soft: #6E5F68;
+  --store-line: #EBD3B8;
 }
 
 * {
@@ -90,6 +105,66 @@ html, body {
 
 .bg-coral-light { background-color: var(--coral-l); }
 .text-coral { color: var(--coral); }
+
+/* ===== Loja pública: tipografia e elementos editoriais ===== */
+.store-bg {
+  background:
+    radial-gradient(circle at 6% 12%, rgba(233,111,158,.14), transparent 30%),
+    radial-gradient(circle at 94% 8%, rgba(156,135,217,.14), transparent 32%),
+    radial-gradient(circle at 88% 55%, rgba(95,194,184,.12), transparent 34%),
+    radial-gradient(circle at 8% 62%, rgba(201,154,74,.12), transparent 30%),
+    var(--store-blush);
+  background-attachment: fixed;
+}
+.font-display {
+  font-family: 'Fraunces', serif;
+  letter-spacing: -0.01em;
+}
+.font-script {
+  font-family: 'Caveat', cursive;
+  font-weight: 700;
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--store-teal-d);
+}
+.eyebrow::before {
+  content: "";
+  width: 20px;
+  height: 2px;
+  background: var(--store-gold);
+  display: inline-block;
+  border-radius: 2px;
+}
+
+/* Faixa de rolagem contínua ("marquee") */
+.marquee {
+  background: linear-gradient(90deg, var(--store-pink) 0%, var(--store-purple) 50%, var(--store-teal-d) 100%);
+  color: #fff;
+  padding: 12px 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.marquee-track {
+  display: inline-flex;
+  gap: 40px;
+  animation: marquee-scroll 26s linear infinite;
+  font-family: 'Fraunces', serif;
+  font-size: 0.95rem;
+}
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
+}
 
 /* Mobile safe area */
 @supports (padding: env(safe-area-inset-bottom)) {

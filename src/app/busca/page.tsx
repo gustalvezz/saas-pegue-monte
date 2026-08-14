@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import PublicHeader from '@/components/PublicHeader'
 import ProductCard from '@/components/ProductCard'
+import Footer from '@/components/Footer'
 import { searchItems } from '@/lib/store'
 
 interface Props {
@@ -26,20 +27,20 @@ export default async function SearchPage({ searchParams }: Props) {
   )}`
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
+    <div className="min-h-screen store-bg">
       <PublicHeader />
 
       <main className="max-w-6xl mx-auto px-3 sm:px-5 py-6">
-        <nav className="text-xs mb-3" style={{ color: 'var(--light)' }} aria-label="breadcrumb">
-          <Link href="/" style={{ color: 'var(--mid)' }}>Início</Link> / Busca
+        <nav className="text-xs mb-3" style={{ color: 'var(--store-ink-soft)' }} aria-label="breadcrumb">
+          <Link href="/" style={{ color: 'var(--store-ink-soft)' }}>Início</Link> / Busca
         </nav>
 
-        <h1 className="text-xl font-black mb-1" style={{ color: 'var(--dark)' }}>
+        <h1 className="font-display text-2xl font-semibold mb-1" style={{ color: 'var(--store-ink)' }}>
           {q ? `Resultados para "${q}"` : 'O que você está procurando?'}
         </h1>
 
         {q && (
-          <p className="text-sm mb-5" style={{ color: 'var(--mid)' }}>
+          <p className="text-sm mb-5" style={{ color: 'var(--store-ink-soft)' }}>
             {results.length} {results.length === 1 ? 'item encontrado' : 'itens encontrados'}
           </p>
         )}
@@ -47,7 +48,7 @@ export default async function SearchPage({ searchParams }: Props) {
         {q && results.length === 0 && (
           <div className="text-center py-12">
             <p className="text-4xl mb-2">🔍</p>
-            <p className="text-sm font-bold mb-4" style={{ color: 'var(--mid)' }}>
+            <p className="text-sm font-bold mb-4" style={{ color: 'var(--store-ink-soft)' }}>
               Não encontramos nada com esse termo — mas talvez tenhamos algo parecido.
             </p>
             <a
@@ -55,7 +56,7 @@ export default async function SearchPage({ searchParams }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-white text-sm font-extrabold"
-              style={{ background: '#25D366' }}
+              style={{ background: 'var(--store-teal-d)' }}
             >
               💬 Perguntar no WhatsApp
             </a>
@@ -68,6 +69,8 @@ export default async function SearchPage({ searchParams }: Props) {
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
   )
 }
