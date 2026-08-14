@@ -1,11 +1,12 @@
-import { createServerSupabase } from '@/lib/supabase-server'
+import { createPublicSupabase } from '@/lib/supabase-public'
 import { InventoryItem, InventoryItemWithCategory, KitItemWithDetail, ProductCategory } from '@/lib/types'
 
-/** Consultas públicas do catálogo (loja) — usam o client server-side, que
- * respeita as policies de leitura pública (anon) configuradas no Supabase.
- * Toda função tolera falha de rede/banco (ex: build sem credenciais reais,
- * instabilidade momentânea do Supabase) devolvendo um resultado vazio em
- * vez de derrubar a página ou o build inteiro. */
+/** Consultas públicas do catálogo (loja) — usam o client público (sem
+ * cookies), que respeita as policies de leitura pública (anon) do Supabase
+ * e permite pré-renderização estática das páginas. Toda função tolera
+ * falha de rede/banco (ex: build sem credenciais reais, instabilidade
+ * momentânea do Supabase) devolvendo um resultado vazio em vez de
+ * derrubar a página ou o build inteiro. */
 
 async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
@@ -17,7 +18,7 @@ async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 
 export async function getCategories(): Promise<ProductCategory[]> {
   return safe(async () => {
-    const supabase = createServerSupabase()
+    const supabase = createPublicSupabase()
     const { data } = await supabase.from('categories').select('*').order('name')
     return (data ?? []) as ProductCategory[]
   }, [])
@@ -25,7 +26,7 @@ export async function getCategories(): Promise<ProductCategory[]> {
 
 export async function getCategoryBySlug(slug: string): Promise<ProductCategory | null> {
   return safe(async () => {
-    const supabase = createServerSupabase()
+    const supabase = createPublicSupabase()
     const { data } = await supabase.from('categories').select('*').eq('slug', slug).maybeSingle()
     return data as ProductCategory | null
   }, null)
@@ -33,7 +34,7 @@ export async function getCategoryBySlug(slug: string): Promise<ProductCategory |
 
 export async function getCategoryItemCounts(): Promise<Record<string, number>> {
   return safe(async () => {
-    const supabase = createServerSupabase()
+    const supabase = createPublicSupabase()
     const { data } = await supabase.from('inventory_items').select('category_id').eq('active', true)
     const counts: Record<string, number> = {}
     for (const row of data ?? []) {
@@ -46,7 +47,7 @@ export async function getCategoryItemCounts(): Promise<Record<string, number>> {
 
 export async function getItemsByCategory(categoryId: string): Promise<InventoryItem[]> {
   return safe(async () => {
-    const supabase = createServerSupabase()
+    const supabase = createPublicSupabase()
     const { data } = await supabase
       .from('inventory_items')
       .select('*')
@@ -59,7 +60,7 @@ export async function getItemsByCategory(categoryId: string): Promise<InventoryI
 
 export async function getFeaturedItems(limit = 8): Promise<InventoryItem[]> {
   return safe(async () => {
-    const supabase = createServerSupabase()
+    const supabase = createPublicSupabase()
     const { data } = await supabase
       .from('inventory_items')
       .select('*')
@@ -72,7 +73,7 @@ export async function getFeaturedItems(limit = 8): Promise<InventoryItem[]> {
 
 export async function getItemBySlug(slug: string): Promise<InventoryItemWithCategory | null> {
   return safe(async () => {
-    const supabase = createServerSupabase()
+    const supabase = createPublicSupabase()
     const { data } = await supabase
       .from('inventory_items')
       .select('*, category:categories(*)')
@@ -85,7 +86,7 @@ export async function getItemBySlug(slug: string): Promise<InventoryItemWithCate
 
 export async function getKitComponents(kitId: string): Promise<KitItemWithDetail[]> {
   return safe(async () => {
-    const supabase = createServerSupabase()
+    const supabase = createPublicSupabase()
     const { data } = await supabase
       .from('kit_items')
       .select('*, component:inventory_items!kit_items_component_item_id_fkey(*)')
@@ -96,7 +97,7 @@ export async function getKitComponents(kitId: string): Promise<KitItemWithDetail
 
 export async function getRelatedItems(categoryId: string | null, excludeId: string, limit = 4): Promise<InventoryItem[]> {
   return safe(async () => {
-    const supabase = createServerSupabase()
+    const supabase = createPublicSupabase()
     let query = supabase.from('inventory_items').select('*').eq('active', true).neq('id', excludeId).limit(limit)
     if (categoryId) query = query.eq('category_id', categoryId)
     const { data } = await query
@@ -106,7 +107,7 @@ export async function getRelatedItems(categoryId: string | null, excludeId: stri
 
 export async function getAllItemSlugs(): Promise<{ slug: string }[]> {
   return safe(async () => {
-    const supabase = createServerSupabase()
+    const supabase = createPublicSupabase()
     const { data } = await supabase.from('inventory_items').select('slug').eq('active', true)
     return (data ?? []) as { slug: string }[]
   }, [])
