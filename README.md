@@ -66,10 +66,14 @@ Micro SaaS de **locação de decorações para festas**. O core do produto é fe
 
 ### Loja Pública (vitrine)
 
-- **Home, categoria e produto/kit** — `/`, `/categoria/[slug]`, `/produto/[slug]`, acessíveis sem login
+- **Home, categoria, produto/kit e busca** — `/`, `/categoria/[slug]`, `/produto/[slug]`, `/busca`, acessíveis sem login
+- **Busca livre tolerante a erro de digitação** (fuzzy search via `pg_trgm`/`word_similarity`) — "minie" encontra "Minnie"
 - **Kits com "conteúdo do kit"** — página do kit lista os itens que o compõem
-- **SEO completo** — metadados dinâmicos por página, Open Graph, JSON-LD (Organization/Product/BreadcrumbList), `sitemap.xml`, `robots.txt`, `llms.txt`
-- **Categorias por tipo de produto** (não mais por tipo de festa) e **tags pré-cadastradas** (infantil, menina, 15 anos…) geridas no formulário de item do Inventário
+- **Carrossel de fotos no hero**, gerenciável em `/dashboard/vitrine`; usa as fotos dos kits como padrão até a Flávia cadastrar as próprias
+- **"Como funciona"**, **Diferenciais** e **FAQ** (accordion sem JS) na home
+- **Design próprio da loja** — paleta e tipografia (Fraunces/Caveat) isoladas em `--store-*`/`.store-bg`, sem afetar o painel interno
+- **SEO completo** — metadados dinâmicos por página, Open Graph, Twitter Card, JSON-LD (`LocalBusiness` site-wide, `Product`, `BreadcrumbList`, `FAQPage`), meta tags de geolocalização, `sitemap.xml`, `robots.txt`, `llms.txt`
+- **Categorias por tipo de produto** (não mais por tipo de festa) e **tags pré-cadastradas** (infantil, menina, 15 anos, temas como Toy Story/Homem-Aranha…) geridas no formulário de item do Inventário, com opção de criar categoria/tag nova direto no formulário
 - Fluxo de pedido/cotação ainda não implementado (Fase 2) — botão "Fazer pedido" desabilitado por enquanto
 
 ### Categorias de transações
@@ -298,3 +302,4 @@ npm run lint     # ESLint
 | 3.2.1 | 2026-08-12 | Aplica logo oficial (favicon, ícones PWA, headers do login e dashboard) no lugar do ícone placeholder |
 | 4.0.0 | 2026-08-12 | Reposiciona o produto (core = vitrine pública de locação, não controle financeiro) e documenta o plano completo da Loja Pública no PRD.md — planejamento apenas, implementação ainda não iniciada |
 | 4.1.0 | 2026-08-12 | Fundação da Loja Pública (Fase 1): categorias por tipo de produto, tags pré-cadastradas e kits no admin; migrations 007/008; vitrine pública (home, categoria, produto/kit) com SEO completo — sitemap, robots, llms.txt, JSON-LD |
+| 4.2.0 | 2026-08-12 | Busca livre no catálogo (fuzzy/tolerante a erro de digitação via pg_trgm, migrations 011-013) e redesign visual da loja pública: paleta e tipografia próprias (Fraunces/Caveat), marquee, "como funciona" editorial, seção de diferenciais, FAQ com FAQPage JSON-LD, footer, LocalBusiness JSON-LD site-wide, meta tags de SEO local |
