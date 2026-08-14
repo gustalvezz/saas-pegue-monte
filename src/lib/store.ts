@@ -32,19 +32,6 @@ export async function getCategoryBySlug(slug: string): Promise<ProductCategory |
   }, null)
 }
 
-export async function getCategoryItemCounts(): Promise<Record<string, number>> {
-  return safe(async () => {
-    const supabase = createPublicSupabase()
-    const { data } = await supabase.from('inventory_items').select('category_id').eq('active', true)
-    const counts: Record<string, number> = {}
-    for (const row of data ?? []) {
-      if (!row.category_id) continue
-      counts[row.category_id] = (counts[row.category_id] ?? 0) + 1
-    }
-    return counts
-  }, {})
-}
-
 export async function getItemsByCategory(categoryId: string): Promise<InventoryItem[]> {
   return safe(async () => {
     const supabase = createPublicSupabase()
@@ -54,19 +41,6 @@ export async function getItemsByCategory(categoryId: string): Promise<InventoryI
       .eq('active', true)
       .eq('category_id', categoryId)
       .order('name')
-    return (data ?? []) as InventoryItem[]
-  }, [])
-}
-
-export async function getFeaturedItems(limit = 8): Promise<InventoryItem[]> {
-  return safe(async () => {
-    const supabase = createPublicSupabase()
-    const { data } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .eq('active', true)
-      .order('created_at', { ascending: false })
-      .limit(limit)
     return (data ?? []) as InventoryItem[]
   }, [])
 }
@@ -103,6 +77,28 @@ export async function getRelatedItems(categoryId: string | null, excludeId: stri
     const { data } = await query
     return (data ?? []) as InventoryItem[]
   }, [])
+}
+
+/** Itens ativos agrupados por categoria, com um limite por categoria — usado
+ * pelas abas de destaques na home. Uma única consulta (sem N+1). */
+export async function getItemsGroupedByCategory(perCategory = 10): Promise<Record<string, InventoryItem[]>> {
+  return safe(async () => {
+    const supabase = createPublicSupabase()
+    const { data } = await supabase
+      .from('inventory_items')
+      .select('*')
+      .eq('active', true)
+      .not('category_id', 'is', null)
+      .order('created_at', { ascending: false })
+
+    const grouped: Record<string, InventoryItem[]> = {}
+    for (const item of (data ?? []) as InventoryItem[]) {
+      const catId = item.category_id!
+      if (!grouped[catId]) grouped[catId] = []
+      if (grouped[catId].length < perCategory) grouped[catId].push(item)
+    }
+    return grouped
+  }, {})
 }
 
 export async function getAllItemSlugs(): Promise<{ slug: string }[]> {
