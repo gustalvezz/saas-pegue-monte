@@ -129,18 +129,15 @@ export async function getHeroImages(limit = 4): Promise<string[]> {
   }, [])
 }
 
+/** Busca tolerante a erro de digitação — usa a função search_inventory_items
+ * (similaridade de trigramas via pg_trgm), então "minie" também encontra
+ * "Minnie". */
 export async function searchItems(query: string): Promise<InventoryItem[]> {
   const term = query.trim()
   if (!term) return []
   return safe(async () => {
     const supabase = createPublicSupabase()
-    const escaped = term.replace(/[%_]/g, '\\$&')
-    const { data } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .eq('active', true)
-      .or(`name.ilike.%${escaped}%,description.ilike.%${escaped}%`)
-      .order('name')
+    const { data } = await supabase.rpc('search_inventory_items', { search_term: term })
     return (data ?? []) as InventoryItem[]
   }, [])
 }
