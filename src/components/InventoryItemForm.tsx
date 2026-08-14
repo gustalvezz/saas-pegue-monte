@@ -31,6 +31,10 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryError, setNewCategoryError] = useState('')
   const [creatingCategory, setCreatingCategory] = useState(false)
+  const [newTagOpen, setNewTagOpen] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const [newTagError, setNewTagError] = useState('')
+  const [creatingTag, setCreatingTag] = useState(false)
 
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(initial?.image_url ?? null)
@@ -92,6 +96,29 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
       setNewCategoryError(e instanceof Error ? e.message : 'Erro ao criar categoria')
     } finally {
       setCreatingCategory(false)
+    }
+  }
+
+  async function handleCreateTag() {
+    const name = newTagName.trim()
+    if (!name) { setNewTagError('Digite um nome'); return }
+    const slug = slugify(name)
+    if (tagOptions.some((t) => t.slug === slug)) { setNewTagError('Já existe uma tag com esse nome'); return }
+
+    setCreatingTag(true)
+    setNewTagError('')
+    try {
+      const { data, error: insErr } = await supabase.from('tag_options').insert({ name, slug }).select().single()
+      if (insErr) throw insErr
+      const created = data as TagOption
+      setTagOptions((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+      setSelectedTags((prev) => [...prev, created.slug])
+      setNewTagOpen(false)
+      setNewTagName('')
+    } catch (e: unknown) {
+      setNewTagError(e instanceof Error ? e.message : 'Erro ao criar tag')
+    } finally {
+      setCreatingTag(false)
     }
   }
 
@@ -358,7 +385,7 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
 
           {/* Tags pré-cadastradas */}
           <div>
-            <label className="field-label">Tags (ocasião / público)</label>
+            <label className="field-label">Tags (ocasião, público, tema…)</label>
             <div className="flex flex-wrap gap-1.5">
               {tagOptions.map((t) => {
                 const active = selectedTags.includes(t.slug)
@@ -378,7 +405,48 @@ export default function InventoryItemForm({ initial, onSaved, onClose }: Props) 
                   </button>
                 )
               })}
+              <button
+                type="button"
+                onClick={() => setNewTagOpen(true)}
+                className="px-2.5 py-1 rounded-full border border-dashed text-xs font-bold"
+                style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
+              >
+                + Nova tag…
+              </button>
             </div>
+
+            {newTagOpen && (
+              <div className="mt-2 p-2.5 rounded-lg" style={{ background: 'var(--bg)', border: '1.5px solid var(--border)' }}>
+                <label className="field-label">Nome da nova tag</label>
+                <input
+                  className="field-input"
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  placeholder="Ex: Toy Story"
+                  autoFocus
+                />
+                {newTagError && <p className="text-xs font-bold mt-1" style={{ color: 'var(--coral)' }}>{newTagError}</p>}
+                <div className="flex gap-1.5 mt-2">
+                  <button
+                    type="button"
+                    onClick={handleCreateTag}
+                    disabled={creatingTag}
+                    className="flex-1 py-1.5 rounded-lg text-white text-xs font-extrabold disabled:opacity-60"
+                    style={{ background: 'var(--teal)' }}
+                  >
+                    {creatingTag ? 'Criando…' : 'Criar e usar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setNewTagOpen(false); setNewTagName(''); setNewTagError('') }}
+                    className="px-3 py-1.5 rounded-lg border text-xs font-bold"
+                    style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {error && <p className="text-xs font-bold" style={{ color: 'var(--coral)' }}>{error}</p>}

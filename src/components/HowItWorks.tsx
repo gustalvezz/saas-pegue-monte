@@ -1,7 +1,7 @@
 const STEPS = [
   { icon: '🎈', title: 'Escolha', text: 'Navegue o catálogo, monte um kit ou pegue um já pronto' },
   { icon: '📅', title: 'Informe a data', text: 'O sistema já mostra se está disponível pro seu evento' },
-  { icon: '💬', title: 'Confirme com a gente', text: 'A Flávia valida tudo com você pelo WhatsApp' },
+  { icon: '💬', title: 'Confirme com a gente', text: 'Nossa equipe valida tudo com você pelo WhatsApp' },
   { icon: '🎉', title: 'Retire ou receba', text: 'No dia combinado, é só aproveitar a festa' },
 ]
 
