@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
+import SafeImage from '@/components/SafeImage'
 import PublicHeader from '@/components/PublicHeader'
 import ProductCard from '@/components/ProductCard'
 import { getAllItemSlugs, getItemBySlug, getKitComponents, getRelatedItems } from '@/lib/store'
@@ -96,7 +96,7 @@ export default async function ProductPage({ params }: Props) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div className="relative rounded-2xl overflow-hidden" style={{ aspectRatio: '1 / 1', background: '#fff' }}>
-            <Image src={item.image_url} alt={item.name} fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover" priority />
+            <SafeImage src={item.image_url} alt={item.name} fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover" priority />
           </div>
 
           <div>
@@ -161,7 +161,7 @@ export default async function ProductPage({ params }: Props) {
               {kitComponents.map((k) => (
                 <div key={k.id} className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)', background: '#fff' }}>
                   <div className="relative" style={{ aspectRatio: '1 / 1' }}>
-                    <Image src={k.component.image_url} alt={k.component.name} fill sizes="200px" className="object-cover" />
+                    <SafeImage src={k.component.image_url} alt={k.component.name} fill sizes="200px" className="object-cover" />
                   </div>
                   <p className="text-xs font-bold px-2 py-1.5 truncate" style={{ color: 'var(--dark)' }}>
                     {k.quantity}x {k.component.name}

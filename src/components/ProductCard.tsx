@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import Image from 'next/image'
+import SafeImage from '@/components/SafeImage'
 import { InventoryItem } from '@/lib/types'
 import { formatBRL } from '@/lib/utils'
 
@@ -15,7 +15,7 @@ export default function ProductCard({ item }: Props) {
       style={{ borderColor: 'var(--border)', background: '#fff' }}
     >
       <div className="relative" style={{ aspectRatio: '1 / 1' }}>
-        <Image src={item.image_url} alt={item.name} fill sizes="(max-width: 640px) 50vw, 25vw" className="object-cover" />
+        <SafeImage src={item.image_url} alt={item.name} fill sizes="(max-width: 640px) 50vw, 25vw" className="object-cover" />
         {item.is_kit && (
           <span
             className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full text-xs font-extrabold"
