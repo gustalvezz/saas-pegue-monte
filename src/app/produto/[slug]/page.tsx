@@ -4,8 +4,9 @@ import Link from 'next/link'
 import SafeImage from '@/components/SafeImage'
 import PublicHeader from '@/components/PublicHeader'
 import ProductCard from '@/components/ProductCard'
-import { getAllItemSlugs, getItemBySlug, getKitComponents, getRelatedItems } from '@/lib/store'
+import { getAllItemSlugs, getItemBySlug, getKitComponents, getRelatedItems, getTagOptions } from '@/lib/store'
 import { formatBRL } from '@/lib/utils'
+import { TagOption } from '@/lib/types'
 
 export const revalidate = 300
 
@@ -30,16 +31,30 @@ function buildDescription(item: { description: string | null; name: string; colo
   return `${parts.join(', ')} — disponível para locação na Decora Festa.`
 }
 
+/** Traduz os slugs de tag do item (ex: "toy-story") em nomes de exibição
+ * (ex: "Toy Story"), a partir do vocabulário pré-cadastrado. */
+function resolveTagNames(itemTags: string[], allTags: TagOption[]): string[] {
+  const bySlug = new Map(allTags.map((t) => [t.slug, t.name]))
+  return itemTags.map((slug) => bySlug.get(slug) ?? slug)
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const item = await getItemBySlug(params.slug)
   if (!item) return {}
 
-  const description = buildDescription(item)
-  const title = `${item.name} para Locação | Decora Festa`
+  const allTags = await getTagOptions()
+  const tagNames = resolveTagNames(item.tags, allTags)
+
+  const baseDescription = buildDescription(item)
+  const description = tagNames.length > 0
+    ? `${baseDescription} Tema: ${tagNames.join(', ')}.`
+    : baseDescription
+  const title = `${item.name} — Decoração para Festa | Decora Festa`
 
   return {
     title,
     description,
+    keywords: tagNames.length > 0 ? tagNames : undefined,
     alternates: { canonical: `${APP_URL}/produto/${item.slug}` },
     openGraph: {
       title,
@@ -55,12 +70,14 @@ export default async function ProductPage({ params }: Props) {
   const item = await getItemBySlug(params.slug)
   if (!item) notFound()
 
-  const [kitComponents, related] = await Promise.all([
+  const [kitComponents, related, allTags] = await Promise.all([
     item.is_kit ? getKitComponents(item.id) : Promise.resolve([]),
     getRelatedItems(item.category_id, item.id, 4),
+    getTagOptions(),
   ])
 
   const description = buildDescription(item)
+  const tagNames = resolveTagNames(item.tags, allTags)
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -69,6 +86,7 @@ export default async function ProductPage({ params }: Props) {
     description,
     image: item.image_url,
     category: item.category?.name,
+    keywords: tagNames.length > 0 ? tagNames.join(', ') : undefined,
     offers: item.rental_price_unit != null ? {
       '@type': 'Offer',
       price: item.rental_price_unit,
@@ -100,7 +118,7 @@ export default async function ProductPage({ params }: Props) {
           </div>
 
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               {item.is_kit && (
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold" style={{ background: 'var(--purple-l)', color: 'var(--purple-dark)' }}>
                   Kit
@@ -137,6 +155,16 @@ export default async function ProductPage({ params }: Props) {
                 </div>
               )}
             </div>
+
+            {tagNames.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {tagNames.map((name) => (
+                  <span key={name} className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: 'var(--bg)', color: 'var(--mid)' }}>
+                    #{name}
+                  </span>
+                ))}
+              </div>
+            )}
 
             <button
               type="button"

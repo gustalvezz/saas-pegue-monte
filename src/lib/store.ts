@@ -1,5 +1,5 @@
 import { createPublicSupabase } from '@/lib/supabase-public'
-import { HeroImage, InventoryItem, InventoryItemWithCategory, KitItemWithDetail, ProductCategory } from '@/lib/types'
+import { HeroImage, InventoryItem, InventoryItemWithCategory, KitItemWithDetail, ProductCategory, TagOption } from '@/lib/types'
 
 /** Consultas públicas do catálogo (loja) — usam o client público (sem
  * cookies), que respeita as policies de leitura pública (anon) do Supabase
@@ -21,6 +21,17 @@ export async function getCategories(): Promise<ProductCategory[]> {
     const supabase = createPublicSupabase()
     const { data } = await supabase.from('categories').select('*').order('name')
     return (data ?? []) as ProductCategory[]
+  }, [])
+}
+
+/** Todas as tags pré-cadastradas — usado pra traduzir slug (armazenado no
+ * item) em nome de exibição (ex: "toy-story" → "Toy Story") nas páginas
+ * públicas e no schema.org. */
+export async function getTagOptions(): Promise<TagOption[]> {
+  return safe(async () => {
+    const supabase = createPublicSupabase()
+    const { data } = await supabase.from('tag_options').select('*')
+    return (data ?? []) as TagOption[]
   }, [])
 }
 
