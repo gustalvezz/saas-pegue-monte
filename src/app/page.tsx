@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import PublicHeader from '@/components/PublicHeader'
 import HeroCarousel from '@/components/HeroCarousel'
+import HowItWorks from '@/components/HowItWorks'
 import FeaturedCategoryTabs from '@/components/FeaturedCategoryTabs'
 import { getCategories, getHeroImages, getItemsGroupedByCategory } from '@/lib/store'
 
@@ -50,7 +51,7 @@ export default async function HomePage() {
       <HeroCarousel images={heroImages} />
 
       {/* Hero */}
-      <section className="text-center py-8 sm:py-12 px-3">
+      <section className="text-center py-5 sm:py-7 px-3">
         <h1 className="text-2xl sm:text-4xl font-black leading-tight" style={{ color: 'var(--dark)' }}>
           Decoração de festa, <span style={{ color: 'var(--teal)' }}>pegue e monte</span>
         </h1>
@@ -58,6 +59,8 @@ export default async function HomePage() {
           Kits prontos ou itens avulsos para locação. Escolha, informe a data do seu evento e reserve online.
         </p>
       </section>
+
+      <HowItWorks />
 
       <main className="max-w-6xl mx-auto px-3 sm:px-5 pb-10">
         <FeaturedCategoryTabs categories={categories} itemsByCategory={itemsByCategory} />

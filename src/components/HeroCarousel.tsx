@@ -22,7 +22,7 @@ export default function HeroCarousel({ images, intervalMs = 4500 }: Props) {
   if (images.length === 0) return null
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ aspectRatio: '21 / 9', background: 'var(--border)' }}>
+    <div className="relative w-full overflow-hidden aspect-[16/9] sm:aspect-[3/1] sm:max-h-80" style={{ background: 'var(--border)' }}>
       {images.map((src, i) => (
         <div
           key={src + i}
