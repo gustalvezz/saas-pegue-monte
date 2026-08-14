@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import PublicHeader from '@/components/PublicHeader'
 import HeroCarousel from '@/components/HeroCarousel'
+import HeroSearchBar from '@/components/HeroSearchBar'
 import HowItWorks from '@/components/HowItWorks'
 import FeaturedCategoryTabs from '@/components/FeaturedCategoryTabs'
 import { getCategories, getHeroImages, getItemsGroupedByCategory } from '@/lib/store'
@@ -48,8 +49,9 @@ export default async function HomePage() {
 
       <PublicHeader />
 
-      <div className="max-w-6xl mx-auto px-3 sm:px-5 pt-4">
+      <div className="relative max-w-6xl mx-auto px-3 sm:px-5 pt-4">
         <HeroCarousel images={heroImages} />
+        <HeroSearchBar />
       </div>
 
       {/* Hero */}

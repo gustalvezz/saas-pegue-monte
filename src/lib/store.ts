@@ -129,6 +129,22 @@ export async function getHeroImages(limit = 4): Promise<string[]> {
   }, [])
 }
 
+export async function searchItems(query: string): Promise<InventoryItem[]> {
+  const term = query.trim()
+  if (!term) return []
+  return safe(async () => {
+    const supabase = createPublicSupabase()
+    const escaped = term.replace(/[%_]/g, '\\$&')
+    const { data } = await supabase
+      .from('inventory_items')
+      .select('*')
+      .eq('active', true)
+      .or(`name.ilike.%${escaped}%,description.ilike.%${escaped}%`)
+      .order('name')
+    return (data ?? []) as InventoryItem[]
+  }, [])
+}
+
 export async function getAllItemSlugs(): Promise<{ slug: string }[]> {
   return safe(async () => {
     const supabase = createPublicSupabase()
