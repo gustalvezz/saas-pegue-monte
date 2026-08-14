@@ -22,7 +22,7 @@ export default function FeaturedCategoryTabs({ categories, itemsByCategory }: Pr
   if (withItems.length === 0) return null
 
   return (
-    <section>
+    <section id="categorias" className="scroll-mt-20">
       <h2 className="text-lg font-black mb-3" style={{ color: 'var(--dark)' }}>Destaques</h2>
 
       {/* Abas de categoria */}

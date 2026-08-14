@@ -7,7 +7,7 @@ const STEPS = [
 
 export default function HowItWorks() {
   return (
-    <section className="max-w-6xl mx-auto px-3 sm:px-5 py-8">
+    <section id="como-funciona" className="max-w-6xl mx-auto px-3 sm:px-5 py-8 scroll-mt-20">
       <h2 className="text-lg font-black text-center mb-5" style={{ color: 'var(--dark)' }}>Como funciona</h2>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {STEPS.map((step, i) => (
