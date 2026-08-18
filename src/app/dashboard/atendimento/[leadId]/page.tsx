@@ -40,6 +40,8 @@ export default function LeadConversationPage() {
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [extracting, setExtracting] = useState(false)
+  const [extractError, setExtractError] = useState('')
 
   // Formulário de edição dos dados do lead
   const [fName, setFName] = useState('')
@@ -120,6 +122,21 @@ export default function LeadConversationPage() {
     setEditMode(false)
   }
 
+  async function handleExtractOrder() {
+    if (!lead) return
+    setExtracting(true)
+    setExtractError('')
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/extract-order`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao montar o pedido')
+      router.push(`/dashboard/eventos/${data.eventId}`)
+    } catch (e: unknown) {
+      setExtractError(e instanceof Error ? e.message : 'Erro ao montar o pedido')
+      setExtracting(false)
+    }
+  }
+
   if (loading || !lead) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
@@ -156,6 +173,17 @@ export default function LeadConversationPage() {
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          {messages.length > 0 && (
+            <button
+              onClick={handleExtractOrder}
+              disabled={extracting}
+              className="px-3 py-1.5 rounded-lg text-white text-xs font-extrabold disabled:opacity-60"
+              style={{ background: 'var(--teal-d)' }}
+              title="Lê a conversa inteira e monta um rascunho de pedido pra você revisar"
+            >
+              {extracting ? 'Montando…' : '✨ Montar pedido'}
+            </button>
+          )}
           {(lead.status === 'qualificado' || lead.status === 'fechado') && (
             <button
               onClick={() => {
@@ -185,6 +213,12 @@ export default function LeadConversationPage() {
           </button>
         </div>
       </div>
+
+      {extractError && (
+        <div className="mx-3 sm:mx-5 mt-3 px-3 py-2 rounded-lg text-xs font-bold" style={{ background: 'var(--coral-l)', color: 'var(--coral)' }}>
+          {extractError}
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row flex-1 max-w-5xl mx-auto w-full">
         {/* Chat area */}
