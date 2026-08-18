@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
-import { Lead, Conversation, LeadStatus } from '@/lib/types'
+import { Lead, Conversation, LeadStatus, EventType, BudgetRange } from '@/lib/types'
 import ChatBubble from '@/components/ChatBubble'
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -25,6 +25,9 @@ const STATUS_COLORS: Record<LeadStatus, string> = {
   perdido: 'var(--mid)',
 }
 
+const EVENT_TYPES: EventType[] = ['aniversário', 'casamento', 'chá_bebê', 'debutante', 'outros']
+const BUDGET_RANGES: BudgetRange[] = ['até R$500', 'R$500-R$1000', 'R$1000-R$2000', 'R$2000+']
+
 export default function LeadConversationPage() {
   const router = useRouter()
   const params = useParams()
@@ -35,6 +38,17 @@ export default function LeadConversationPage() {
   const [lead, setLead] = useState<Lead | null>(null)
   const [messages, setMessages] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
+  const [editMode, setEditMode] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  // Formulário de edição dos dados do lead
+  const [fName, setFName] = useState('')
+  const [fEventType, setFEventType] = useState<EventType | ''>('')
+  const [fEventDate, setFEventDate] = useState('')
+  const [fGuestCount, setFGuestCount] = useState('')
+  const [fVenue, setFVenue] = useState('')
+  const [fBudgetRange, setFBudgetRange] = useState<BudgetRange | ''>('')
+  const [fThemeNotes, setFThemeNotes] = useState('')
 
   const fetchData = useCallback(async () => {
     const [{ data: leadData }, { data: msgs }] = await Promise.all([
@@ -74,6 +88,36 @@ export default function LeadConversationPage() {
     const updates: Partial<Lead> & { status: LeadStatus } = { status: newStatus }
     await supabase.from('leads').update(updates).eq('id', lead.id)
     setLead({ ...lead, status: newStatus })
+  }
+
+  function openEditLead() {
+    if (!lead) return
+    setFName(lead.name ?? '')
+    setFEventType(lead.event_type ?? '')
+    setFEventDate(lead.event_date ?? '')
+    setFGuestCount(lead.guest_count?.toString() ?? '')
+    setFVenue(lead.venue ?? '')
+    setFBudgetRange(lead.budget_range ?? '')
+    setFThemeNotes(lead.theme_notes ?? '')
+    setEditMode(true)
+  }
+
+  async function handleSaveLead() {
+    if (!lead) return
+    setSaving(true)
+    const updates: Partial<Lead> = {
+      name: fName.trim() || null,
+      event_type: fEventType || null,
+      event_date: fEventDate || null,
+      guest_count: fGuestCount ? parseInt(fGuestCount) : null,
+      venue: fVenue.trim() || null,
+      budget_range: fBudgetRange || null,
+      theme_notes: fThemeNotes.trim() || null,
+    }
+    await supabase.from('leads').update(updates).eq('id', lead.id)
+    setLead({ ...lead, ...updates })
+    setSaving(false)
+    setEditMode(false)
   }
 
   if (loading || !lead) {
@@ -188,29 +232,102 @@ export default function LeadConversationPage() {
 
         {/* Lead info panel */}
         <div
-          className="lg:w-72 px-4 py-4 space-y-4 lg:border-l"
+          className="lg:w-72 px-4 py-4 space-y-4 lg:border-l overflow-y-auto"
           style={{ borderColor: 'var(--border)', background: '#fff' }}
         >
-          <h3 className="font-black text-sm" style={{ color: 'var(--dark)' }}>Dados do lead</h3>
-
-          <div className="space-y-2 text-sm">
-            {[
-              { label: 'Telefone', value: lead.phone },
-              { label: 'Tipo de festa', value: lead.event_type },
-              { label: 'Data do evento', value: lead.event_date ? new Date(lead.event_date).toLocaleDateString('pt-BR') : null },
-              { label: 'Convidados', value: lead.guest_count?.toString() },
-              { label: 'Local', value: lead.venue },
-              { label: 'Orçamento', value: lead.budget_range },
-              { label: 'Tema/cores', value: lead.theme_notes },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--light)', letterSpacing: '0.5px' }}>{label}</p>
-                <p style={{ color: value ? 'var(--dark)' : 'var(--border)' }}>
-                  {value ?? '—'}
-                </p>
-              </div>
-            ))}
+          <div className="flex items-center justify-between">
+            <h3 className="font-black text-sm" style={{ color: 'var(--dark)' }}>Dados do lead</h3>
+            {!editMode && (
+              <button
+                onClick={openEditLead}
+                className="px-2.5 py-1 rounded-lg border text-xs font-bold"
+                style={{ borderColor: 'var(--teal)', color: 'var(--teal)' }}
+              >
+                Editar
+              </button>
+            )}
           </div>
+
+          {editMode ? (
+            <div className="space-y-3">
+              <div>
+                <label className="field-label">Nome</label>
+                <input className="field-input" value={fName} onChange={(e) => setFName(e.target.value)} placeholder="Nome do cliente" />
+              </div>
+              <div>
+                <label className="field-label">Telefone</label>
+                <input className="field-input" value={lead.phone} disabled style={{ opacity: 0.6 }} />
+                <p className="text-xs mt-1" style={{ color: 'var(--light)' }}>Vinculado à conversa do WhatsApp — não pode ser alterado aqui.</p>
+              </div>
+              <div>
+                <label className="field-label">Tipo de festa</label>
+                <select className="field-input" value={fEventType} onChange={(e) => setFEventType(e.target.value as EventType | '')}>
+                  <option value="">—</option>
+                  {EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="field-label">Data do evento</label>
+                <input type="date" className="field-input" value={fEventDate} onChange={(e) => setFEventDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="field-label">Convidados</label>
+                <input type="number" min={0} className="field-input" value={fGuestCount} onChange={(e) => setFGuestCount(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <label className="field-label">Local</label>
+                <input className="field-input" value={fVenue} onChange={(e) => setFVenue(e.target.value)} placeholder="Casa, salão, sítio…" />
+              </div>
+              <div>
+                <label className="field-label">Orçamento</label>
+                <select className="field-input" value={fBudgetRange} onChange={(e) => setFBudgetRange(e.target.value as BudgetRange | '')}>
+                  <option value="">—</option>
+                  {BUDGET_RANGES.map((b) => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="field-label">Tema/cores</label>
+                <textarea className="field-input" rows={2} value={fThemeNotes} onChange={(e) => setFThemeNotes(e.target.value)} placeholder="Tema, cores, referências…" />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={handleSaveLead}
+                  disabled={saving}
+                  className="flex-1 py-2 rounded-lg text-white text-xs font-extrabold disabled:opacity-60"
+                  style={{ background: 'var(--teal)' }}
+                >
+                  {saving ? 'Salvando…' : 'Salvar'}
+                </button>
+                <button
+                  onClick={() => setEditMode(false)}
+                  className="px-3 py-2 rounded-lg border text-xs font-bold"
+                  style={{ borderColor: 'var(--border)', color: 'var(--mid)' }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 text-sm">
+              {[
+                { label: 'Nome', value: lead.name },
+                { label: 'Telefone', value: lead.phone },
+                { label: 'Tipo de festa', value: lead.event_type },
+                { label: 'Data do evento', value: lead.event_date ? new Date(lead.event_date).toLocaleDateString('pt-BR') : null },
+                { label: 'Convidados', value: lead.guest_count?.toString() },
+                { label: 'Local', value: lead.venue },
+                { label: 'Orçamento', value: lead.budget_range },
+                { label: 'Tema/cores', value: lead.theme_notes },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--light)', letterSpacing: '0.5px' }}>{label}</p>
+                  <p style={{ color: value ? 'var(--dark)' : 'var(--border)' }}>
+                    {value ?? '—'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div>
             <p className="text-xs font-extrabold uppercase mb-2" style={{ color: 'var(--light)', letterSpacing: '0.5px' }}>Status</p>
