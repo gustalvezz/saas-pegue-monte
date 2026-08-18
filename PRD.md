@@ -4,9 +4,9 @@
 **Tipo:** Micro SaaS de locação de decorações para festas — vitrine pública de reservas + gestão do negócio (inventário, eventos, financeiro, atendimento)
 **Proprietária:** Flavia Alves da Silva
 **Banco:** C6Bank · Ag. 1 · Conta 177400862
-**Versão do documento:** 4.0
+**Versão do documento:** 4.3
 **Última atualização:** 2026-08-12
-**Status:** Em produção (v3.2, painel interno) · v4.0 (Loja Pública) em planejamento
+**Status:** Em produção (painel interno + Loja Pública v4.2 no ar) · v4.0 Fase 2 (fluxo de pedido) em andamento
 
 ---
 
@@ -109,6 +109,15 @@ Acesso ao painel interno exclusivo via login com email/senha (operação single-
 | **Cálculo automático do total** | Soma quantidade × preço unitário de todos os itens do evento |
 | **Fluxo de status do evento** | cotação → confirmado → em_andamento → concluído, ou cancelado a qualquer momento |
 | **Dashboard de eventos** | Lista com filtro por status e contagem de festas nos próximos 7 dias |
+
+**Loja Pública — fluxo de pedido (v4.3, Fase 2 em andamento)**
+
+| Funcionalidade | Descrição |
+|---|---|
+| **Cadastro completo do cliente no evento** | Nome, telefone, email, CPF, RG, endereço e pessoa de referência (nome + telefone), com upsert automático por telefone ao salvar o evento |
+| **Campos de contrato no evento** | Horário de retirada, horário-limite de devolução, tipo de espaço (interno/externo/misto), frete de entrega, quem cuida do frete de devolução, valor do sinal |
+| **Edição manual dos dados do lead** | Nome, tipo de evento, data, número de convidados, local, faixa de orçamento e observações de tema ficam editáveis na tela de atendimento (telefone permanece somente leitura, vinculado à conversa) |
+| **"✨ Montar pedido" (extração por IA)** | A partir da conversa do WhatsApp já registrada, a IA (Claude, tool-calling na busca real do catálogo) monta um rascunho de cotação — evento + itens — sem nunca inventar item ou confirmar nada sozinha; sempre cai pra revisão manual |
 
 **Google Agenda (v3.1)**
 
@@ -414,7 +423,7 @@ Browser (PWA)
 ### v4.0 — Loja Pública (próxima, prioridade máxima)
 Plano completo na seção 11. Resumo das fases:
 - [x] Fase 1 — Fundação pública (schema, RLS pública, páginas de catálogo/produto/kit com SEO completo)
-- [ ] Fase 2 — Fluxo de pedido (seletor de itens, cadastro do cliente, cotação pendente, email via Resend)
+- [~] Fase 2 — Fluxo de pedido: formulário completo de cliente/contrato no evento e extração de pedido por IA a partir do WhatsApp ✅ · seletor visual de itens extras direto na loja e email pra Flávia via Resend ⏳
 - [ ] Fase 3 — Dashboard de pedidos pendentes
 - [ ] Fase 4 — Contrato em PDF + assinatura eletrônica simples + sync automático com Google Agenda
 - [ ] Fase 5 — Assistente de busca por IA (reutilizável no WhatsApp depois)
@@ -557,7 +566,7 @@ Campos adicionais abaixo vieram da leitura do modelo de contrato real fornecido 
 | Fase | Entrega |
 |---|---|
 | **1 — Fundação pública** | Migrations (slug, is_kit, kit_items, categories, tag_options, customers, campos de contrato em events), RLS pública de leitura, páginas de catálogo/produto/kit com SEO completo (11.7), sitemap, robots, llms.txt |
-| **2 — Fluxo de pedido** | Seletor visual de itens extras, cadastro do cliente, geração da cotação pendente (`events` + `customers` + `event_items`), email pra Flávia via Resend |
+| **2 — Fluxo de pedido** | Seletor visual de itens extras, cadastro do cliente, geração da cotação pendente (`events` + `customers` + `event_items`), email pra Flávia via Resend. **Em andamento:** formulário completo de cliente/contrato no evento (upsert por telefone) e extração de pedido por IA a partir da conversa do WhatsApp (`✨ Montar pedido`) já implementados; seletor visual na loja pública e email via Resend ainda faltam |
 | **3 — Dashboard de pedidos** | Tela "Pedidos pendentes" — editar, confirmar, cancelar cotações vindas da loja |
 | **4 — Contrato + assinatura** | Geração de PDF, link de assinatura público, canvas de assinatura + trilha de auditoria, sync automático com Google Agenda ao finalizar |
 | **5 — Assistente por IA** | Ferramenta de busca compartilhada (`buscar_itens`), modal de chat na loja — desenhada para reuso futuro no WhatsApp |
@@ -575,3 +584,4 @@ Campos adicionais abaixo vieram da leitura do modelo de contrato real fornecido 
 | 3.2 | 2026-07-23 | Atualiza arquitetura e requisitos não-funcionais para refletir a migração de deploy Render → Vercel |
 | 4.0 | 2026-08-12 | Reposiciona o produto (core = fechar negócios via vitrine pública, não controle financeiro) e documenta o plano completo da Loja Pública: kits, fluxo de cotação sem carrinho, assistente por IA reutilizável, assinatura eletrônica, requisitos de SEO/LLM, modelo de dados e fases de implementação — planejado, ainda não implementado |
 | 4.1 | 2026-08-12 | Fase 1 implementada: fundação de dados (categorias, tags, kits) e vitrine pública (home, categoria, produto/kit) com SEO. Busca livre com tolerância a erro de digitação. Redesign visual da loja com paleta/tipografia próprias, "como funciona" editorial, diferenciais, FAQ (`FAQPage` JSON-LD), footer e `LocalBusiness` JSON-LD site-wide — itens além do plano original de 11, incorporados a partir de um template de referência que a proprietária testou |
+| 4.3 | 2026-08-12 | Início da Fase 2 (fluxo de pedido): formulário completo de cliente/contrato no evento (CPF, RG, email, endereço, horários, tipo de espaço, frete, sinal) com upsert de cliente por telefone; dados do lead passam a ser editáveis manualmente na tela de atendimento; extração de pedido por IA a partir da conversa do WhatsApp já registrada (`✨ Montar pedido`, tool-calling na busca real do catálogo, nunca confirma nada sozinha). Seletor visual de itens na loja pública e email de notificação via Resend permanecem pendentes na Fase 2 |
