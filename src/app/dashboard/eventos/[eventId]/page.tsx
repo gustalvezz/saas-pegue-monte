@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
-import { DecoraEvent, EventItem, EventItemWithDetail, EventStatus, EventType } from '@/lib/types'
+import { DecoraEvent, EventItem, EventItemWithDetail, EventStatus, EventType, ReturnShipping, SpaceType } from '@/lib/types'
 import { formatBRL } from '@/lib/utils'
 import AvailabilityBadge from '@/components/AvailabilityBadge'
 import ItemPicker from '@/components/ItemPicker'
@@ -20,6 +20,16 @@ const STATUS_CFG: Record<EventStatus, { label: string; color: string; bg: string
 }
 const STATUS_FLOW: EventStatus[] = ['cotacao', 'confirmado', 'em_andamento', 'concluido']
 const EVENT_TYPES: EventType[] = ['aniversário', 'casamento', 'chá_bebê', 'debutante', 'outros']
+const SPACE_TYPES: { value: SpaceType; label: string }[] = [
+  { value: 'interno', label: 'Interno' },
+  { value: 'externo', label: 'Externo' },
+  { value: 'misto', label: 'Misto' },
+]
+const RETURN_SHIPPING: { value: ReturnShipping; label: string }[] = [
+  { value: 'locataria', label: 'Por conta da locatária' },
+  { value: 'locadora', label: 'Por conta da locadora' },
+  { value: 'retirada_locadora', label: 'Retirada pela locadora' },
+]
 
 function fmt(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -40,36 +50,64 @@ export default function EventDetailPage() {
   const [editMode, setEditMode] = useState(isNew)
   const [error, setError] = useState('')
 
-  // Form state
+  // Cliente
   const [clientName, setClientName] = useState('')
   const [clientPhone, setClientPhone] = useState('')
+  const [clientCpf, setClientCpf] = useState('')
+  const [clientRg, setClientRg] = useState('')
+  const [clientEmail, setClientEmail] = useState('')
+  const [clientAddress, setClientAddress] = useState('')
+  const [referenceName, setReferenceName] = useState('')
+  const [referencePhone, setReferencePhone] = useState('')
+
+  // Evento
   const [eventType, setEventType] = useState<EventType>('aniversário')
   const [eventDate, setEventDate] = useState('')
   const [pickupDate, setPickupDate] = useState('')
   const [returnDate, setReturnDate] = useState('')
+  const [pickupTime, setPickupTime] = useState('')
+  const [returnDeadlineTime, setReturnDeadlineTime] = useState('')
   const [venue, setVenue] = useState('')
+  const [spaceType, setSpaceType] = useState<SpaceType | ''>('')
   const [themeNotes, setThemeNotes] = useState('')
   const [guestCount, setGuestCount] = useState('')
   const [notes, setNotes] = useState('')
 
+  // Logística e valores
+  const [deliveryFee, setDeliveryFee] = useState('')
+  const [returnShipping, setReturnShipping] = useState<ReturnShipping | ''>('')
+  const [depositAmount, setDepositAmount] = useState('')
+
   const fetchEvent = useCallback(async () => {
     const [{ data: ev }, { data: items }] = await Promise.all([
-      supabase.from('events').select('*').eq('id', eventId).single(),
+      supabase.from('events').select('*, customer:customers(*)').eq('id', eventId).single(),
       supabase.from('event_items').select('*, inventory_item:inventory_items(*)').eq('event_id', eventId),
     ])
     if (ev) {
-      const e = ev as DecoraEvent
+      const e = ev as DecoraEvent & { customer: import('@/lib/types').Customer | null }
       setEvent(e)
       setClientName(e.client_name)
       setClientPhone(e.client_phone ?? '')
+      setClientCpf(e.customer?.cpf ?? '')
+      setClientRg(e.customer?.rg ?? '')
+      setClientEmail(e.customer?.email ?? '')
+      setClientAddress(e.customer?.address ?? '')
+      setReferenceName(e.customer?.reference_name ?? '')
+      setReferencePhone(e.customer?.reference_phone ?? '')
       setEventType(e.event_type ?? 'aniversário')
       setEventDate(e.event_date)
       setPickupDate(e.pickup_date)
       setReturnDate(e.return_date)
+      setPickupTime(e.pickup_time ?? '')
+      setReturnDeadlineTime(e.return_deadline_time ?? '')
       setVenue(e.venue ?? '')
+      setSpaceType(e.space_type ?? '')
       setThemeNotes(e.theme_notes ?? '')
       setGuestCount(e.guest_count ? String(e.guest_count) : '')
       setNotes(e.notes ?? '')
+      setDeliveryFee(e.delivery_fee ? String(e.delivery_fee) : '')
+      setReturnShipping(e.return_shipping ?? '')
+      setDepositAmount(e.deposit_amount ? String(e.deposit_amount) : '')
     }
     setEventItems((items ?? []) as EventItemWithDetail[])
     setLoading(false)
@@ -103,17 +141,52 @@ export default function EventDetailPage() {
     setSaving(true)
     setError('')
     try {
+      // Cliente: upsert em customers por telefone (quando informado), pra não duplicar cadastro
+      let customerId: string | null = event?.customer_id ?? null
+      const hasCustomerData = clientCpf.trim() || clientRg.trim() || clientEmail.trim() || clientAddress.trim()
+      if (hasCustomerData || customerId) {
+        const customerPayload = {
+          name: clientName.trim(),
+          cpf: clientCpf.trim(),
+          rg: clientRg.trim() || null,
+          phone: clientPhone.trim(),
+          email: clientEmail.trim(),
+          address: clientAddress.trim(),
+          reference_name: referenceName.trim() || null,
+          reference_phone: referencePhone.trim() || null,
+        }
+        if (customerId) {
+          await supabase.from('customers').update(customerPayload).eq('id', customerId)
+        } else if (clientPhone.trim()) {
+          const { data: existing } = await supabase.from('customers').select('id').eq('phone', clientPhone.trim()).maybeSingle()
+          if (existing) {
+            customerId = existing.id
+            await supabase.from('customers').update(customerPayload).eq('id', customerId)
+          } else {
+            const { data: created } = await supabase.from('customers').insert(customerPayload).select('id').single()
+            customerId = created?.id ?? null
+          }
+        }
+      }
+
       const payload = {
         client_name: clientName.trim(),
         client_phone: clientPhone.trim() || null,
+        customer_id: customerId,
         event_type: eventType,
         event_date: eventDate,
         pickup_date: pickupDate,
         return_date: returnDate,
+        pickup_time: pickupTime || null,
+        return_deadline_time: returnDeadlineTime || null,
         venue: venue.trim() || null,
+        space_type: spaceType || null,
         theme_notes: themeNotes.trim() || null,
         guest_count: guestCount ? parseInt(guestCount) : null,
         notes: notes.trim() || null,
+        delivery_fee: deliveryFee ? parseFloat(deliveryFee) : 0,
+        return_shipping: returnShipping || null,
+        deposit_amount: depositAmount ? parseFloat(depositAmount) : null,
         status: 'cotacao' as EventStatus,
       }
       if (isNew) {
@@ -176,7 +249,8 @@ export default function EventDetailPage() {
     setEventItems((prev) => prev.filter((ei) => ei.inventory_item_id !== itemId))
   }
 
-  const total = eventItems.reduce((s, ei) => s + ei.quantity * ei.unit_price, 0)
+  const itemsTotal = eventItems.reduce((s, ei) => s + ei.quantity * ei.unit_price, 0)
+  const total = itemsTotal + (event?.delivery_fee ?? 0)
 
   if (loading) {
     return (
@@ -218,55 +292,134 @@ export default function EventDetailPage() {
 
         {/* Event form */}
         {(isNew || editMode) ? (
-          <div className="rounded-2xl p-4 mb-4 space-y-3" style={{ background: '#fff', border: '1.5px solid var(--border)' }}>
-            <div>
-              <label className="field-label">Cliente *</label>
-              <input className="field-input" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nome do cliente" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-4 mb-4">
+            {/* Cliente */}
+            <div className="rounded-2xl p-4 space-y-3" style={{ background: '#fff', border: '1.5px solid var(--border)' }}>
+              <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--light)', letterSpacing: '0.5px' }}>Cliente</p>
               <div>
-                <label className="field-label">Telefone</label>
-                <input className="field-input" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="(11) 99999-9999" />
+                <label className="field-label">Nome *</label>
+                <input className="field-input" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nome do cliente" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="field-label">Telefone</label>
+                  <input className="field-input" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="(11) 99999-9999" />
+                </div>
+                <div>
+                  <label className="field-label">Email</label>
+                  <input type="email" className="field-input" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="cliente@email.com" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="field-label">CPF</label>
+                  <input className="field-input" value={clientCpf} onChange={(e) => setClientCpf(e.target.value)} placeholder="000.000.000-00" />
+                </div>
+                <div>
+                  <label className="field-label">RG</label>
+                  <input className="field-input" value={clientRg} onChange={(e) => setClientRg(e.target.value)} placeholder="00.000.000-0" />
+                </div>
               </div>
               <div>
-                <label className="field-label">Tipo de festa</label>
-                <select className="field-input" value={eventType} onChange={(e) => setEventType(e.target.value as EventType)}>
-                  {EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                <label className="field-label">Endereço completo</label>
+                <input className="field-input" value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} placeholder="Rua, número, bairro, cidade — SP" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="field-label">Pessoa de referência</label>
+                  <input className="field-input" value={referenceName} onChange={(e) => setReferenceName(e.target.value)} placeholder="Nome (opcional)" />
+                </div>
+                <div>
+                  <label className="field-label">Telefone da referência</label>
+                  <input className="field-input" value={referencePhone} onChange={(e) => setReferencePhone(e.target.value)} placeholder="(11) 99999-9999" />
+                </div>
+              </div>
+            </div>
+
+            {/* Evento */}
+            <div className="rounded-2xl p-4 space-y-3" style={{ background: '#fff', border: '1.5px solid var(--border)' }}>
+              <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--light)', letterSpacing: '0.5px' }}>Evento</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="field-label">Tipo de festa</label>
+                  <select className="field-input" value={eventType} onChange={(e) => setEventType(e.target.value as EventType)}>
+                    {EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="field-label">Tipo de espaço</label>
+                  <select className="field-input" value={spaceType} onChange={(e) => setSpaceType(e.target.value as SpaceType | '')}>
+                    <option value="">—</option>
+                    {SPACE_TYPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="field-label">Data da festa *</label>
+                  <input type="date" className="field-input" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+                </div>
+                <div>
+                  <label className="field-label">Retirada *</label>
+                  <input type="date" className="field-input" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
+                </div>
+                <div>
+                  <label className="field-label">Devolução *</label>
+                  <input type="date" className="field-input" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="field-label">Horário de entrega/retirada</label>
+                  <input type="time" className="field-input" value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} />
+                </div>
+                <div>
+                  <label className="field-label">Horário-limite de devolução</label>
+                  <input type="time" className="field-input" value={returnDeadlineTime} onChange={(e) => setReturnDeadlineTime(e.target.value)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="field-label">Local</label>
+                  <input className="field-input" value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="Salão, casa, sítio…" />
+                </div>
+                <div>
+                  <label className="field-label">Convidados</label>
+                  <input type="number" className="field-input" value={guestCount} onChange={(e) => setGuestCount(e.target.value)} placeholder="0" />
+                </div>
+              </div>
+              <div>
+                <label className="field-label">Tema / cores</label>
+                <input className="field-input" value={themeNotes} onChange={(e) => setThemeNotes(e.target.value)} placeholder="Princesa rosa, tropical, minimalista…" />
+              </div>
+              <div>
+                <label className="field-label">Observações</label>
+                <textarea className="field-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas internas…" />
+              </div>
+            </div>
+
+            {/* Logística e valores */}
+            <div className="rounded-2xl p-4 space-y-3" style={{ background: '#fff', border: '1.5px solid var(--border)' }}>
+              <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--light)', letterSpacing: '0.5px' }}>Frete e sinal</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="field-label">Frete de entrega (R$)</label>
+                  <input type="number" min={0} step={0.01} className="field-input" value={deliveryFee} onChange={(e) => setDeliveryFee(e.target.value)} placeholder="0,00" />
+                </div>
+                <div>
+                  <label className="field-label">Sinal (R$)</label>
+                  <input type="number" min={0} step={0.01} className="field-input" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="0,00" />
+                </div>
+              </div>
+              <div>
+                <label className="field-label">Frete de devolução</label>
+                <select className="field-input" value={returnShipping} onChange={(e) => setReturnShipping(e.target.value as ReturnShipping | '')}>
+                  <option value="">—</option>
+                  {RETURN_SHIPPING.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="field-label">Data da festa *</label>
-                <input type="date" className="field-input" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
-              </div>
-              <div>
-                <label className="field-label">Retirada *</label>
-                <input type="date" className="field-input" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
-              </div>
-              <div>
-                <label className="field-label">Devolução *</label>
-                <input type="date" className="field-input" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="field-label">Local</label>
-                <input className="field-input" value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="Salão, casa, sítio…" />
-              </div>
-              <div>
-                <label className="field-label">Convidados</label>
-                <input type="number" className="field-input" value={guestCount} onChange={(e) => setGuestCount(e.target.value)} placeholder="0" />
-              </div>
-            </div>
-            <div>
-              <label className="field-label">Tema / cores</label>
-              <input className="field-input" value={themeNotes} onChange={(e) => setThemeNotes(e.target.value)} placeholder="Princesa rosa, tropical, minimalista…" />
-            </div>
-            <div>
-              <label className="field-label">Observações</label>
-              <textarea className="field-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas internas…" />
-            </div>
+
             {error && <p className="text-xs font-bold" style={{ color: 'var(--coral)' }}>{error}</p>}
             <div className="flex gap-2">
               {!isNew && (
@@ -292,10 +445,13 @@ export default function EventDetailPage() {
               { label: 'Convidados', value: event.guest_count?.toString() },
               { label: 'Data da festa', value: fmt(event.event_date) },
               { label: 'Local', value: event.venue },
-              { label: 'Retirada', value: fmt(event.pickup_date) },
-              { label: 'Devolução', value: fmt(event.return_date) },
+              { label: 'Retirada', value: fmt(event.pickup_date) + (event.pickup_time ? ` às ${event.pickup_time}` : '') },
+              { label: 'Devolução', value: fmt(event.return_date) + (event.return_deadline_time ? ` até ${event.return_deadline_time}` : '') },
               { label: 'Tema / cores', value: event.theme_notes },
               { label: 'Telefone', value: event.client_phone },
+              { label: 'Tipo de espaço', value: event.space_type },
+              { label: 'Frete de entrega', value: event.delivery_fee ? formatBRL(event.delivery_fee) : null },
+              { label: 'Sinal', value: event.deposit_amount ? formatBRL(event.deposit_amount) : null },
             ].map(({ label, value }) => (
               <div key={label}>
                 <p className="text-xs font-extrabold uppercase" style={{ color: 'var(--light)', letterSpacing: '0.5px' }}>{label}</p>
@@ -380,7 +536,14 @@ export default function EventDetailPage() {
                   className="flex items-center justify-between px-4 py-3 rounded-xl"
                   style={{ background: 'var(--dark)', color: '#fff' }}
                 >
-                  <span className="font-extrabold text-sm">Total do evento</span>
+                  <div>
+                    <span className="font-extrabold text-sm">Total do evento</span>
+                    {(event?.delivery_fee ?? 0) > 0 && (
+                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                        {formatBRL(itemsTotal)} + {formatBRL(event!.delivery_fee)} de frete
+                      </p>
+                    )}
+                  </div>
                   <span className="font-black text-lg">{formatBRL(total)}</span>
                 </div>
               </div>
