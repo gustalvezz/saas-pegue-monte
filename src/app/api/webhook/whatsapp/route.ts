@@ -5,6 +5,7 @@ export const maxDuration = 60
 import { sendText, sendImage } from '@/lib/evolution-api'
 import { generateBotResponse } from '@/lib/chatbot'
 import { findRelevantItems } from '@/lib/catalog'
+import { sendPushToAll } from '@/lib/push'
 import { Lead, Conversation, EventType, BudgetRange } from '@/lib/types'
 
 // Evolution API webhook payload types
@@ -129,8 +130,13 @@ export async function POST(req: NextRequest) {
     .update({ status: 'em_atendimento', last_message_at: new Date().toISOString() })
     .eq('id', lead.id)
 
-  // If bot is disabled, don't auto-reply
+  // If bot is disabled, don't auto-reply — mas avisa a Flávia que chegou mensagem nova
   if (!lead.bot_active) {
+    await sendPushToAll({
+      title: `Nova mensagem de ${lead.name ?? phone}`,
+      body: messageText.slice(0, 120),
+      url: `/dashboard/atendimento/${lead.id}`,
+    })
     return NextResponse.json({ ok: true, action: 'human_handling' })
   }
 
@@ -159,10 +165,19 @@ export async function POST(req: NextRequest) {
     if (leadData.theme_notes) updatePayload.theme_notes = leadData.theme_notes
     if (leadData.budget_range) updatePayload.budget_range = leadData.budget_range as BudgetRange
   }
+  const justQualified = qualified && lead.status !== 'qualificado'
   if (qualified) updatePayload.status = 'qualificado'
 
   if (Object.keys(updatePayload).length > 0) {
     await supabase.from('leads').update(updatePayload).eq('id', lead.id)
+  }
+
+  if (justQualified) {
+    await sendPushToAll({
+      title: '🎉 Novo lead qualificado',
+      body: `${leadData?.name ?? lead.name ?? phone} — dados coletados, pronto pra fechar`,
+      url: `/dashboard/atendimento/${lead.id}`,
+    })
   }
 
   // Send bot reply

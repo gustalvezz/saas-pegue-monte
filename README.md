@@ -16,6 +16,7 @@ Micro SaaS de **locação de decorações para festas**. O core do produto é fe
 | Backend / Auth | Supabase (PostgreSQL + Auth + Storage) |
 | Deploy | **Vercel** (serverless — funções de API com `maxDuration` estendido) |
 | PWA | Web App Manifest + Service Worker |
+| Notificações push | Web Push (VAPID) via `web-push` — SW cuida de `push`/`notificationclick` |
 | WhatsApp API | Evolution API (auto-hospedado no Render, serviço separado) |
 | IA Chatbot | Anthropic Claude Haiku (`@anthropic-ai/sdk`) |
 | Agenda | Google Calendar API (OAuth 2.0) |
@@ -76,6 +77,13 @@ Micro SaaS de **locação de decorações para festas**. O core do produto é fe
 - **Categorias por tipo de produto** (não mais por tipo de festa) e **tags pré-cadastradas** (infantil, menina, 15 anos, temas como Toy Story/Homem-Aranha…) geridas no formulário de item do Inventário, com opção de criar categoria/tag nova direto no formulário
 - Fluxo de pedido/cotação ainda não implementado (Fase 2) — botão "Fazer pedido" desabilitado por enquanto
 
+### Notificações push (PWA)
+
+- Banner "🔔 Ativar notificações" no painel — pede permissão do navegador e inscreve o dispositivo (Web Push/VAPID), salvo em `push_subscriptions`
+- Dispara notificação em 3 eventos: **novo lead qualificado**, **nova mensagem do cliente enquanto a Flávia está com o atendimento manual assumido** (`bot_active = false`) e **rascunho de pedido pronto** (após o "✨ Montar pedido")
+- Toque na notificação abre a tela exata (conversa do lead ou evento), não só o dashboard genérico
+- Envio nunca bloqueia o fluxo principal — falha de push é só logada, WhatsApp/extração seguem normalmente
+
 ### Categorias de transações
 
 `Locação` · `Devolução` · `Compra de Decoração` · `Fatura Cartão` · `Outros`
@@ -106,6 +114,8 @@ Todas as tabelas têm **RLS habilitado**. Migrations em `supabase/migrations/`, 
 | `004_extend_inventory.sql` | `inventory_items` | Extensão do catálogo para inventário físico (material, tamanho, quantidade, preços) |
 | `005_events.sql` | `events`, `event_items` | Módulo Eventos e itens alocados por evento |
 | `006_google_calendar.sql` | `google_tokens` + coluna `events.google_event_id` | Tokens OAuth do Google Calendar por usuário |
+| … | | migrations 007–013: fundação da Loja Pública (categorias, tags, kits, clientes, contratos, busca fuzzy) — ver seção 11 do `PRD.md` |
+| `014_push_subscriptions.sql` | `push_subscriptions` | Inscrições de push notification (Web Push/VAPID) por usuário do dashboard |
 
 ### Tabela `transactions`
 
@@ -153,6 +163,12 @@ ANTHROPIC_API_KEY=sk-ant-...
 # Google Calendar (opcional — necessário para sincronização de eventos)
 GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-...
+
+# Notificações push (opcional — necessário para o banner "Ativar notificações")
+# Gere um par novo com: npx web-push generate-vapid-keys
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=BK...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:contato@decorafesta.app.br
 ```
 
 ### 3. Banco de dados
@@ -220,6 +236,7 @@ src/
 │   ├── globals.css                           # CSS variables + Tailwind base
 │   ├── login/page.tsx                        # tela de login
 │   ├── offline/page.tsx                      # fallback PWA offline
+│   ├── dashboard/layout.tsx                  # monta o banner de ativação de notificações push
 │   ├── dashboard/page.tsx                    # dashboard financeiro principal
 │   ├── dashboard/atendimento/page.tsx        # lista de leads WhatsApp
 │   ├── dashboard/atendimento/[leadId]/       # conversa + dados do lead
@@ -233,6 +250,8 @@ src/
 │   ├── api/auth/google/callback/route.ts     # troca code por tokens, salva no Supabase
 │   ├── api/auth/google/disconnect/route.ts   # remove tokens do Google
 │   ├── api/calendar/sync/route.ts            # cria/atualiza/remove evento no Google Agenda
+│   ├── api/leads/[leadId]/extract-order/     # extração de pedido por IA a partir da conversa do WhatsApp
+│   ├── api/push/subscribe/route.ts           # salva/remove inscrição de push notification do dispositivo
 │   └── api/health/route.ts                   # healthcheck
 ├── components/
 │   ├── KPICards.tsx              # 4 cards de KPI financeiro
@@ -247,7 +266,8 @@ src/
 │   ├── InventoryItemForm.tsx     # modal add/edit item (com captura de foto)
 │   ├── AvailabilityBadge.tsx     # badge de disponibilidade (X/Y disp.)
 │   ├── EventCard.tsx             # card de evento na listagem
-│   └── ItemPicker.tsx            # modal de seleção de itens p/ evento com disponibilidade
+│   ├── ItemPicker.tsx            # modal de seleção de itens p/ evento com disponibilidade
+│   └── PushNotificationManager.tsx  # banner de ativação + inscrição de push notification
 └── lib/
     ├── types.ts               # interfaces TypeScript
     ├── utils.ts               # formatBRL, KPIs, CSV, etc.
@@ -258,7 +278,9 @@ src/
     ├── chatbot.ts             # Claude Haiku — geração de respostas
     ├── catalog.ts             # busca de itens relevantes p/ o bot enviar
     ├── inventory.ts           # disponibilidade de itens por período, conflitos
-    └── google-calendar.ts     # wrapper Google Calendar API (OAuth, CRUD de eventos)
+    ├── google-calendar.ts     # wrapper Google Calendar API (OAuth, CRUD de eventos)
+    ├── order-extraction.ts    # extração de pedido por IA (Claude, tool-calling no catálogo)
+    └── push.ts                # envio de push notification (web-push/VAPID) pra todos os dispositivos inscritos
 supabase/
 ├── migrations/
 │   ├── 001_create_transactions.sql
@@ -266,7 +288,9 @@ supabase/
 │   ├── 003_catalog.sql
 │   ├── 004_extend_inventory.sql
 │   ├── 005_events.sql
-│   └── 006_google_calendar.sql
+│   ├── 006_google_calendar.sql
+│   ├── ... (007–013: Loja Pública)
+│   └── 014_push_subscriptions.sql
 └── seed.sql
 public/
 ├── manifest.json             # PWA manifest
@@ -304,3 +328,4 @@ npm run lint     # ESLint
 | 4.1.0 | 2026-08-12 | Fundação da Loja Pública (Fase 1): categorias por tipo de produto, tags pré-cadastradas e kits no admin; migrations 007/008; vitrine pública (home, categoria, produto/kit) com SEO completo — sitemap, robots, llms.txt, JSON-LD |
 | 4.2.0 | 2026-08-12 | Busca livre no catálogo (fuzzy/tolerante a erro de digitação via pg_trgm, migrations 011-013) e redesign visual da loja pública: paleta e tipografia próprias (Fraunces/Caveat), marquee, "como funciona" editorial, seção de diferenciais, FAQ com FAQPage JSON-LD, footer, LocalBusiness JSON-LD site-wide, meta tags de SEO local |
 | 4.3.0 | 2026-08-12 | Início da Fase 2 (fluxo de pedido): formulário de evento completo (cliente com CPF/RG/email/endereço, horários, tipo de espaço, frete, sinal) e botão "✨ Montar pedido" que lê a conversa do WhatsApp e usa IA (tool-calling no catálogo real) pra criar um rascunho de cotação — nunca confirma nada sozinha, sempre pra revisão manual. Dados do lead também passam a ser editáveis manualmente na tela de atendimento |
+| 4.4.0 | 2026-09-03 | Notificações push no PWA (Web Push/VAPID, migration 014 `push_subscriptions`): banner de ativação no painel, disparo em novo lead qualificado, nova mensagem com atendimento manual assumido e rascunho de pedido pronto — toque na notificação abre a tela exata |

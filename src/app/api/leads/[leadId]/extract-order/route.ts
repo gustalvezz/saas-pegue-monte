@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase-server'
 import { extractOrderFromConversation } from '@/lib/order-extraction'
+import { sendPushToAll } from '@/lib/push'
 import { Conversation, Lead } from '@/lib/types'
 
 export const maxDuration = 60
@@ -88,6 +89,12 @@ export async function POST(req: NextRequest, { params }: { params: { leadId: str
       )
     }
   }
+
+  await sendPushToAll({
+    title: '✨ Rascunho de pedido pronto',
+    body: `${newEvent.client_name} — revise a cotação montada a partir da conversa`,
+    url: `/dashboard/eventos/${newEvent.id}`,
+  })
 
   return NextResponse.json({ ok: true, eventId: newEvent.id, missingFields: extracted.missing_fields })
 }

@@ -66,6 +66,15 @@ export interface Conversation {
   created_at: string
 }
 
+export interface PushSubscriptionRecord {
+  id: string
+  user_id: string
+  endpoint: string
+  p256dh: string
+  auth_key: string
+  created_at: string
+}
+
 // --- Inventário / Loja Pública ---
 
 export type ItemMaterial = 'ceramica' | 'plastico' | 'mdf' | 'acrilico' | 'led' | 'tecido' | 'lona' | 'outros'

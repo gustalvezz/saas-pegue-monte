@@ -4,8 +4,8 @@
 **Tipo:** Micro SaaS de locação de decorações para festas — vitrine pública de reservas + gestão do negócio (inventário, eventos, financeiro, atendimento)
 **Proprietária:** Flavia Alves da Silva
 **Banco:** C6Bank · Ag. 1 · Conta 177400862
-**Versão do documento:** 4.3
-**Última atualização:** 2026-08-12
+**Versão do documento:** 4.4
+**Última atualização:** 2026-09-03
 **Status:** Em produção (painel interno + Loja Pública v4.2 no ar) · v4.0 Fase 2 (fluxo de pedido) em andamento
 
 ---
@@ -130,6 +130,16 @@ Acesso ao painel interno exclusivo via login com email/senha (operação single-
 | **Desconectar** | Remove os tokens salvos; sincronização para de ocorrer para novos eventos |
 | **Falha não-bloqueante** | Erros de sincronização com o Google não impedem a operação principal (mudança de status do evento) |
 
+**Notificações push (v4.4)**
+
+| Funcionalidade | Descrição |
+|---|---|
+| **Ativação no painel** | Banner opt-in pede permissão do navegador e inscreve o dispositivo via Web Push (VAPID) |
+| **Novo lead qualificado** | Notifica quando o bot marca o lead como `qualificado`, com link direto pra conversa |
+| **Mensagem em atendimento manual** | Notifica nova mensagem do cliente enquanto `bot_active = false` (Flávia assumiu a conversa) |
+| **Rascunho de pedido pronto** | Notifica quando a extração por IA ("✨ Montar pedido") termina, com link direto pro evento criado |
+| **Falha não-bloqueante** | Envio é fire-and-forget — nunca trava o webhook do WhatsApp nem a extração de pedido |
+
 ### 4.2 Fora do escopo
 
 - Multi-usuário / controle de acesso por empresa
@@ -192,6 +202,13 @@ Acesso ao painel interno exclusivo via login com email/senha (operação single-
 - Conexão exige usuário autenticado no Supabase
 - Fluxo OAuth usa cookie `google_oauth_state` (httpOnly, SameSite=lax, 10 min de validade) para proteção CSRF
 - Se o usuário não tiver conectado o Google, tentativas de sincronização retornam silenciosamente (`ok: false, reason: 'no_google_token'`) sem erro visível
+
+### RF10 — Notificações push
+- Dispositivo se inscreve via Web Push (VAPID) a partir de um banner opt-in no painel; inscrição salva em `push_subscriptions` vinculada ao `user_id` autenticado
+- Dispara notificação em: lead que muda de status para `qualificado`, mensagem recebida enquanto `bot_active = false` (atendimento manual assumido), e rascunho de pedido criado pela extração por IA
+- Cada notificação carrega a URL da tela correspondente (lead ou evento); tocar nela abre/foca essa tela, não só o dashboard genérico
+- Envio é fire-and-forget: falha ou ausência de chave VAPID nunca bloqueia o webhook do WhatsApp nem a extração de pedido
+- Inscrição que retorna 404/410 do provedor (revogada ou expirada) é removida automaticamente na próxima tentativa de envio
 
 ---
 
@@ -322,6 +339,19 @@ updated_at     timestamptz not null default now()
 
 **Política RLS:** `authenticated` → `auth.uid() = user_id` (cada usuário só acessa seu próprio token)
 
+### Tabela `push_subscriptions`
+
+```sql
+id           uuid primary key default gen_random_uuid()
+user_id      uuid fk → auth.users.id
+endpoint     text not null unique
+p256dh       text not null
+auth_key     text not null
+created_at   timestamptz not null default now()
+```
+
+**Política RLS:** `auth.uid() = user_id` (cada usuário só gerencia suas próprias inscrições). O envio server-side usa o client admin (service role), que ignora RLS.
+
 **Políticas RLS (demais tabelas):** `authenticated` → acesso total (select, insert, update, delete)
 
 ---
@@ -431,7 +461,6 @@ Plano completo na seção 11. Resumo das fases:
 ### v3.3 (backlog do painel interno, depois da loja)
 - [ ] Fechamento de lead → gerar transação de Locação automaticamente no financeiro
 - [ ] Relatório de conversão: leads recebidos → qualificados → fechados
-- [ ] Notificação no dashboard quando novo lead qualificado (badge no header)
 - [ ] Carregar seed de dados históricos automaticamente em novos ambientes
 
 ### Concluído
@@ -442,6 +471,7 @@ Plano completo na seção 11. Resumo das fases:
 - [x] Módulo Eventos com seleção de itens e cálculo automático de total (v3.0)
 - [x] Sincronização de eventos com Google Agenda via OAuth 2.0 (v3.1)
 - [x] Migração de deploy Render → Vercel (v3.2)
+- [x] Notificações push no PWA — novo lead qualificado, mensagem em atendimento manual, rascunho de pedido pronto (v4.4)
 
 ### Backlog (sem data definida)
 - [ ] Filtro por intervalo de datas (date range picker) na tabela de transações
@@ -585,3 +615,4 @@ Campos adicionais abaixo vieram da leitura do modelo de contrato real fornecido 
 | 4.0 | 2026-08-12 | Reposiciona o produto (core = fechar negócios via vitrine pública, não controle financeiro) e documenta o plano completo da Loja Pública: kits, fluxo de cotação sem carrinho, assistente por IA reutilizável, assinatura eletrônica, requisitos de SEO/LLM, modelo de dados e fases de implementação — planejado, ainda não implementado |
 | 4.1 | 2026-08-12 | Fase 1 implementada: fundação de dados (categorias, tags, kits) e vitrine pública (home, categoria, produto/kit) com SEO. Busca livre com tolerância a erro de digitação. Redesign visual da loja com paleta/tipografia próprias, "como funciona" editorial, diferenciais, FAQ (`FAQPage` JSON-LD), footer e `LocalBusiness` JSON-LD site-wide — itens além do plano original de 11, incorporados a partir de um template de referência que a proprietária testou |
 | 4.3 | 2026-08-12 | Início da Fase 2 (fluxo de pedido): formulário completo de cliente/contrato no evento (CPF, RG, email, endereço, horários, tipo de espaço, frete, sinal) com upsert de cliente por telefone; dados do lead passam a ser editáveis manualmente na tela de atendimento; extração de pedido por IA a partir da conversa do WhatsApp já registrada (`✨ Montar pedido`, tool-calling na busca real do catálogo, nunca confirma nada sozinha). Seletor visual de itens na loja pública e email de notificação via Resend permanecem pendentes na Fase 2 |
+| 4.4 | 2026-09-03 | Notificações push no PWA (Web Push/VAPID): nova tabela `push_subscriptions`, RF10 documentado em "5. Requisitos funcionais", banner de ativação no painel e disparo em três eventos (lead qualificado, mensagem em atendimento manual, rascunho de pedido pronto) com deep link pra tela exata |
